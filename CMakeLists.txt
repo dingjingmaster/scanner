@@ -25,10 +25,10 @@ add_definitions(
         -D PACKAGE_VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\")
 
 find_package (PkgConfig)
-find_package(Qt5LinguistTools REQUIRED)
 find_package(Qt5 COMPONENTS Core Network REQUIRED)
 
 pkg_check_modules(GIO REQUIRED gio-2.0)
+pkg_check_modules(QT5 REQUIRED Qt5Core Qt5Network)
 
 cmake_host_system_information(RESULT OS QUERY OS_NAME)
 cmake_host_system_information(RESULT RELEASE QUERY OS_RELEASE)
@@ -48,5 +48,4 @@ MESSAGE(STATUS "OS release      : '${RELEASE}'")
 MESSAGE(STATUS "Qt Version      : '${CUR_QT_VERSION}'")
 MESSAGE("")
 
-
-#add_subdirectory(app)
+add_subdirectory(app)
