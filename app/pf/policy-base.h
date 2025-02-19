@@ -65,7 +65,7 @@ private:
     void addIdmAndWeight(const QString& idm, int weight);
 
 private:
-    bool                        mIsCheckIdm;
+    bool                        mIsCheckIdm{};
     QMap<QString, int>          mIdmAndWeight;
 };
 
@@ -187,31 +187,25 @@ class KeywordRule final : public RuleBase
 public:
     explicit KeywordRule(const QString &id);
 
-    void setKeywordAndWeight(const QString &keyword, int wight);
+    bool getWildcard() const;
+    bool getIgnoreZhTw() const;
+    bool getIgnoreCase() const;
+    bool getIgnoreConfuse() const;
+    qint64 getMinMatchCount() const;
+    qint64 getCurrentMatchCount() const;
+    RecognitionMode getRecognitionMode() const;
+    void parseRule(const QJsonValue & rule) override;
     int getWightByKeyword(const QString &keyword) const;
 
-    void setIgnoreCase(bool ignoreCase);
-    bool getIgnoreCase() const;
-
-    void setIgnoreConfuse(bool c);
-    bool getIgnoreConfuse() const;
-
-    void setIgnoreZhTw(bool c);
-    bool getIgnoreZhTw() const;
-
+private:
     void setWildcard(bool c);
-    bool getWildcard() const;
-
+    void setIgnoreZhTw(bool c);
+    void setIgnoreConfuse(bool c);
     void setRecognitionMode(int m);
-    RecognitionMode getRecognitionMode() const;
-
     void setMinMatchCount(qint64 c);
-    qint64 getMinMatchCount() const;
-
+    void setIgnoreCase(bool ignoreCase);
     void addCurrentMatchCount(qint64 c=1);
-    qint64 getCurrentMatchCount() const;
-
-    void parseRule(const QJsonValue & rule) override;
+    void setKeywordAndWeight(const QString &keyword, int wight);
 
 private:
     QMap<QString, int>                          mKeywordAndWeight;          // keyword + wight

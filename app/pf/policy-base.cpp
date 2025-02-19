@@ -38,7 +38,7 @@ const QString & RuleBase::getRuleId() const
 
 void RuleBase::parseRule(const QJsonValue & rule)
 {
-
+    qWarning() << "RuleBase::parseRule, This is Not supported, Please check you code!";
 }
 
 IdmRule::IdmRule(const QString & id)
