@@ -18,6 +18,7 @@ public:
     TaskManager& operator=(const TaskManager&) = delete;
 
     bool parseScanTask(const QString &scanTask);
+    void startScanTask();
 
 private:
     TaskManager();

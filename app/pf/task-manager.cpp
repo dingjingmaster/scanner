@@ -6,12 +6,30 @@
 
 #include <QMap>
 #include <QFile>
+#include <QMutex>
 #include <QString>
 #include <QJsonDocument>
+#include <QWaitCondition>
+
+#include <pthread.h>
 
 #include "task-base.h"
 #include "macros/macros.h"
 
+typedef struct _ThreadPool      ThreadPool;
+typedef struct _ThreadWorker    ThreadWorker;
+
+typedef void* (*ThreadWorkerFunc)(void* args);
+
+struct _ThreadPool
+{
+    bool                shutdown;
+    int                 workerNum;
+    pthread_t*          threadID;
+    ThreadWorkerFunc*   threadWorkerList;
+    QMutex              lock;
+    QWaitCondition      cond;
+};
 
 TaskManager TaskManager::gInstance;
 
@@ -101,6 +119,11 @@ bool TaskManager::parseScanTask(const QString & scanTask)
     Q_D(TaskManager);
 
     return d->parseScanTask(scanTask);
+}
+
+void TaskManager::startScanTask()
+{
+
 }
 
 TaskManager::TaskManager()

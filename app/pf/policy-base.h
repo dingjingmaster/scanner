@@ -46,6 +46,7 @@ public:
     const QString &getRuleId() const;
 
     virtual void parseRule(const QJsonValue& rule);
+    virtual bool matchRule(const QString& stringLine);
 
 private:
     bool                                        mExactMatch;
@@ -76,6 +77,7 @@ public:
     ~FileTypeRule() override = default;
 
     void parseRule(const QJsonValue& rule) override;
+    bool matchRule(const QString& lineString) override;
 
 private:
     void setModifyTimes(const QString& start, const QString& end);

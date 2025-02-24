@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <unistd.h>
 
 
 TaskBase::TaskBase(TaskType tp, const QString & taskId, const QString & taskName)
@@ -15,6 +16,10 @@ TaskBase::TaskBase(TaskType tp, const QString & taskId, const QString & taskName
 }
 
 TaskBase::~TaskBase()
+{
+}
+
+void TaskBase::run()
 {
 }
 
@@ -98,6 +103,27 @@ void ScanTask::setTaskBypassPath(const QString & taskBypassPath)
 const QSet<QString> & ScanTask::getTaskBypassPath() const
 {
     return mTaskBypassPath;
+}
+
+void ScanTask::scanFiles()
+{
+    // 检查是否存在，存在则读取，否则扫描
+
+    // 保存解析到的文件信息 sqlite3
+
+    // 解析文件内容 并 扫描
+}
+
+void ScanTask::run()
+{
+    while (true) {
+        // 获取要扫描的文件 并 开始扫描
+        scanFiles();
+        usleep(1000 * 1000 * 5);
+        if (mTaskStatus == ScanTaskStatus::Stopped) {
+            break;
+        }
+    }
 }
 
 void ScanTask::setPolicyIdList(const QString& policyIdList)

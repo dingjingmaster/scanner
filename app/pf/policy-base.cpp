@@ -41,6 +41,11 @@ void RuleBase::parseRule(const QJsonValue & rule)
     qWarning() << "RuleBase::parseRule, This is Not supported, Please check you code!";
 }
 
+bool RuleBase::matchRule(const QString & stringLine)
+{
+    return false;
+}
+
 IdmRule::IdmRule(const QString & id)
     : RuleBase(id, RuleType::GeneralFileFingerprint)
 {
@@ -204,6 +209,11 @@ void FileTypeRule::parseRule(const QJsonValue & rule)
             qWarning() << "Unknown key: " << key;
         }
     }
+}
+
+bool FileTypeRule::matchRule(const QString & lineString)
+{
+    return false;
 }
 
 void FileTypeRule::setModifyTimes(const QString & start, const QString & end)

@@ -4,12 +4,14 @@
 
 #ifndef andsec_scanner_TASK_BASE_H
 #define andsec_scanner_TASK_BASE_H
-#include <QSet>
+#include <QRunnable>
 #include <QJsonArray>
 #include <QStringList>
 
 #include "policy-base.h"
 
+class ScanTaskManager;
+class ScanTaskManagerPrivate;
 
 enum class TaskType
 {
@@ -19,6 +21,7 @@ enum class TaskType
 
 enum class ScanTaskStatus
 {
+    Stopped,
     Running,
 };
 
@@ -29,14 +32,16 @@ enum class TaskScanMode
     TaskScanFastMode
 };
 
-class TaskBase
+class TaskBase : public QRunnable
 {
 public:
     explicit TaskBase(TaskType tp, const QString& taskId, const QString& taskName);
-    virtual ~TaskBase();
+    ~TaskBase() override;
 
-    void setUseOCR(int useOCR);
+    void run() override;
+
     bool getUseOCR() const;
+    void setUseOCR(int useOCR);
 
 private:
     QString                 mTaskId;
@@ -50,36 +55,32 @@ class ScanTask final : public TaskBase
 public:
     explicit ScanTask(const QString& taskId, const QString& taskName);
 
-    void setTaskStatus(const QString& taskStatus);
-    void setTaskStatus(ScanTaskStatus taskStatus);
+    int getProgressRate() const;
+    int getAttachmentReport() const;
+    TaskScanMode getTaskScanMode() const;
     ScanTaskStatus getTaskStatus() const;
-
-    void setFileTypeList(const QString& fileTypeList);
-    const QSet<QString>& getFileTypeList() const;
-
-    void setBypassFileType(const QString& bypassFileType);
-    const QSet<QString>& getBypassFileType() const;
-
-    void setTaskScanPath(const QString& taskScanPath);
+    void parseRules(const QJsonArray& arr);
     const QSet<QString>& getTaskScanPath() const;
-
-    void setTaskBypassPath(const QString& taskBypassPath);
+    const QSet<QString>& getPolicyIdList() const;
+    const QSet<QString>& getFileTypeList() const;
+    const QSet<QString>& getBypassFileType() const;
     const QSet<QString>& getTaskBypassPath() const;
 
-    void setPolicyIdList(const QString& policyIdList);
-    const QSet<QString>& getPolicyIdList() const;
+    void scanFiles();
+    void run() override;
 
+// private:
     void setProgressRate(int rate);
-    int getProgressRate() const;
-
     void setTaskScanMode (int mode);
-    void setTaskScanMode (TaskScanMode mode);
-    TaskScanMode getTaskScanMode() const;
-
     void setAttachmentReport(int size);
-    int getAttachmentReport() const;
-
-    void parseRules(const QJsonArray& arr);
+    void setTaskScanMode (TaskScanMode mode);
+    void setTaskStatus(ScanTaskStatus taskStatus);
+    void setTaskStatus(const QString& taskStatus);
+    void setTaskScanPath(const QString& taskScanPath);
+    void setPolicyIdList(const QString& policyIdList);
+    void setFileTypeList(const QString& fileTypeList);
+    void setBypassFileType(const QString& bypassFileType);
+    void setTaskBypassPath(const QString& taskBypassPath);
 
 private:
     int                                             mAttachmentReport;      // 附件上报 MB
