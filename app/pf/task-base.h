@@ -5,8 +5,6 @@
 #ifndef andsec_scanner_TASK_BASE_H
 #define andsec_scanner_TASK_BASE_H
 #include <QRunnable>
-#include <QJsonArray>
-#include <QStringList>
 
 #include "policy-base.h"
 

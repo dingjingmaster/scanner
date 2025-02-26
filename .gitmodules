@@ -1,3 +1,12 @@
 [submodule "app/macros"]
 	path = app/macros
 	url = https://github.com/dingjingmaster/macros.git
+[submodule "app/sqlite3-wrap"]
+	path = app/sqlite3-wrap
+	url = https://github.com/dingjingmaster/sqlite3-wrap.git
+[submodule "app/tika-wrap"]
+	path = app/tika-wrap
+	url = https://github.com/dingjingmaster/tika-wrap.git
+[submodule "app/hs-wrap"]
+	path = app/hs-wrap
+	url = https://github.com/dingjingmaster/hs-wrap.git
