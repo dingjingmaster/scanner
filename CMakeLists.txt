@@ -22,12 +22,15 @@ add_definitions(
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
         -D INSTALL_PATH=\\"/usr/local/andsec/\\"
+#        -D DATA_DIR=\\"/var/lib/andsec/scanner/\\"
+        -D DATA_DIR=\\"/tmp\\"
         -D PACKAGE_VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\")
 
 find_package (PkgConfig)
 find_package(Qt5 COMPONENTS Core Network REQUIRED)
 
 pkg_check_modules(GIO REQUIRED gio-2.0)
+pkg_check_modules(SQLITE3 REQUIRED sqlite3)
 pkg_check_modules(QT5 REQUIRED Qt5Core Qt5Network)
 
 cmake_host_system_information(RESULT OS QUERY OS_NAME)
