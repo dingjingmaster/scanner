@@ -19,8 +19,13 @@ enum class TaskType
 
 enum class ScanTaskStatus
 {
-    Stopped,
+    UnStarted,
     Running,
+    Stop,
+    Stopped,
+    Finished,
+    Paused,
+    Error,
 };
 
 enum class TaskScanMode
@@ -37,6 +42,9 @@ public:
     ~TaskBase() override;
 
     void run() override;
+
+    QString getTaskId() const;
+    QString getTaskName() const;
 
     bool getUseOCR() const;
     void setUseOCR(int useOCR);
@@ -57,6 +65,8 @@ public:
     int getAttachmentReport() const;
     TaskScanMode getTaskScanMode() const;
     ScanTaskStatus getTaskStatus() const;
+    int getTaskStatusInt() const;
+    int getTaskScanModeInt() const;
     void parseRules(const QJsonArray& arr);
     const QSet<QString>& getTaskScanPath() const;
     const QSet<QString>& getPolicyIdList() const;
@@ -65,6 +75,7 @@ public:
     const QSet<QString>& getTaskBypassPath() const;
 
     void scanFiles();
+    void stop();
     void run() override;
 
 // private:
@@ -81,6 +92,7 @@ public:
     void setTaskBypassPath(const QString& taskBypassPath);
 
 private:
+    std::atomic_bool                                mIsRunning;
     int                                             mAttachmentReport;      // 附件上报 MB
     int                                             mProgressRate;
     ScanTaskStatus                                  mTaskStatus;

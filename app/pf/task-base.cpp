@@ -4,9 +4,13 @@
 
 #include "task-base.h"
 
+#include <QTimer>
+#include <QDebug>
+#include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
+
 #include <unistd.h>
 
 
@@ -23,6 +27,16 @@ void TaskBase::run()
 {
 }
 
+QString TaskBase::getTaskId() const
+{
+    return mTaskId;
+}
+
+QString TaskBase::getTaskName() const
+{
+    return mTaskName;
+}
+
 void TaskBase::setUseOCR(int useOCR)
 {
     mIsUseOCR = (useOCR == 1);
@@ -34,8 +48,9 @@ bool TaskBase::getUseOCR() const
 }
 
 ScanTask::ScanTask(const QString & taskId, const QString & taskName)
-    : TaskBase(TaskType::ScanTaskType, taskId, taskName)
+    : TaskBase(TaskType::ScanTaskType, taskId, taskName), mIsRunning(false)
 {
+    setAutoDelete(false);
 }
 
 void ScanTask::setTaskStatus(const QString & taskStatus)
@@ -53,6 +68,40 @@ void ScanTask::setTaskStatus(ScanTaskStatus taskStatus)
 ScanTaskStatus ScanTask::getTaskStatus() const
 {
     return mTaskStatus;
+}
+
+int ScanTask::getTaskStatusInt() const
+{
+    switch (mTaskStatus) {
+    default:
+    case ScanTaskStatus::UnStarted:
+        return 0;
+    case ScanTaskStatus::Running:
+        return 1;
+    case ScanTaskStatus::Stopped:
+        return 2;
+    case ScanTaskStatus::Finished:
+        return 3;
+    case ScanTaskStatus::Paused:
+        return 4;
+    case ScanTaskStatus::Error:
+        return 5;
+    }
+
+    return 0;
+}
+
+int ScanTask::getTaskScanModeInt() const
+{
+    switch (mTaskScanMode) {
+    default:
+    case TaskScanMode::TaskScanNormalMode:
+        return 0;
+    case TaskScanMode::TaskScanFastMode:
+        return 2;
+    case TaskScanMode::TaskScanNoDisturbMode:
+        return 3;
+    }
 }
 
 void ScanTask::setFileTypeList(const QString & fileTypeList)
@@ -108,20 +157,44 @@ const QSet<QString> & ScanTask::getTaskBypassPath() const
 void ScanTask::scanFiles()
 {
     // 检查是否存在，存在则读取，否则扫描
+    qInfo() << "ScanTask::scanFiles";
 
     // 保存解析到的文件信息 sqlite3
 
     // 解析文件内容 并 扫描
 }
 
+void ScanTask::stop()
+{
+    mTaskStatus = ScanTaskStatus::Stop;
+    QEventLoop loop;
+    QTimer timer;
+    loop.connect(&timer, &QTimer::timeout, &loop, [&]() {
+        if (mTaskStatus == ScanTaskStatus::Stopped) {
+            loop.exit(0);
+        }
+    });
+    timer.setInterval(1000);
+    timer.start();
+    loop.exec();
+}
+
 void ScanTask::run()
 {
+    qInfo() << "Task: " << getTaskId() << " name: " << getTaskName() << " RUNNING!";
+    mTaskStatus = ScanTaskStatus::Running;
+    scanFiles();
+
     while (true) {
-        // 获取要扫描的文件 并 开始扫描
-        scanFiles();
         usleep(1000 * 1000 * 5);
-        if (mTaskStatus == ScanTaskStatus::Stopped) {
+        if (mTaskStatus == ScanTaskStatus::Stop) {
+            mTaskStatus = ScanTaskStatus::Stopped;
+            qInfo() << "Task: " << getTaskId() << " name: " << getTaskName() << " STOPPED!";
             break;
+        }
+        else if (mTaskStatus == ScanTaskStatus::Running) {
+            // 取xxx文件， 开始扫描
+            // 获取要扫描的文件 并 开始扫描
         }
     }
 }

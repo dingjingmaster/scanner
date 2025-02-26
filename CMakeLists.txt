@@ -52,3 +52,4 @@ MESSAGE(STATUS "Qt Version      : '${CUR_QT_VERSION}'")
 MESSAGE("")
 
 add_subdirectory(app)
+add_subdirectory(test)

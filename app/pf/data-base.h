@@ -23,6 +23,14 @@ public:
      * @brief 初始化数据库
      */
     void initDB() const;
+
+    void insertTask(const QString& taskId, const QString& taskName,
+                    const QString& scanDir, const QString& scanDirExp,
+                    const QString& scanExt, const QString& scanExtExp,
+                    int taskStatus, int scanMode) const;
+    void updateTaskStatus(const QString& taskId, int taskStatus);
+    void updateTotalFile(const QString& taskId, const QString& taskName);
+    void updateFinishedFile(const QString& taskId, const QString& taskName);
 private:
     explicit DataBase(QObject *parent = nullptr);
 private:

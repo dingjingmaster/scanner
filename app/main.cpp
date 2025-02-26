@@ -9,5 +9,7 @@ int main (int argc, char* argv[])
 {
     PolicyFilter app(argc, argv);
 
+    app.start();
+
     return PolicyFilter::exec();
 }

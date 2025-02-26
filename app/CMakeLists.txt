@@ -1,4 +1,5 @@
 add_executable(andsec-scanner main.cpp
+        pf/utils.cc pf/utils.h
         pf/data-base.cc pf/data-base.h
         pf/task-base.cpp pf/task-base.h
         pf/policy-base.cpp pf/policy-base.h

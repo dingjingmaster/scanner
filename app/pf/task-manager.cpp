@@ -8,11 +8,13 @@
 #include <QFile>
 #include <QMutex>
 #include <QString>
+#include <QThreadPool>
 #include <QJsonDocument>
 #include <QWaitCondition>
 
 #include <pthread.h>
 
+#include "data-base.h"
 #include "task-base.h"
 #include "macros/macros.h"
 
@@ -40,16 +42,20 @@ public:
     explicit TaskManagerPrivate(TaskManager* q);
 
     bool parseScanTask(const QString& scanTask);
+    static QString parseTaskId(const QString& scanTask);
+    std::shared_ptr<ScanTask> getScanTask(const QString& scanTaskId);
 
 private:
     TaskManager*                                q_ptr = nullptr;
     QMap<QString, std::shared_ptr<ScanTask>>    mScanTasks;
     QMap<QString, std::shared_ptr<TaskBase>>    mDlpTasks;
+    QThreadPool                                 mScanTaskThreadPool;
 };
 
 TaskManagerPrivate::TaskManagerPrivate(TaskManager * q)
     : q_ptr(q)
 {
+    mScanTaskThreadPool.setMaxThreadCount(1);
 }
 
 bool TaskManagerPrivate::parseScanTask(const QString & scanTask)
@@ -101,12 +107,50 @@ bool TaskManagerPrivate::parseScanTask(const QString & scanTask)
                     scanTaskPtr->setAttachmentReport(attachmentReportFlag ? attachmentReportSize : -1);
                     scanTaskPtr->parseRules(dlpContentDataList.toArray());
                     mScanTasks[taskId] = scanTaskPtr;
+                    DataBase::getInstance().insertTask(taskId, taskName,
+                        scanPath, bypassScanPath,
+                        fileTypeList, bypassFileTypeList,
+                        scanTaskPtr->getTaskStatusInt(), scanTaskPtr->getTaskScanModeInt());
+                    return true;
                 }
             }
         }
     }
 
-    return true;
+    return false;
+}
+
+QString TaskManagerPrivate::parseTaskId(const QString & scanTask)
+{
+    C_RETURN_VAL_IF_FAIL(QFile::exists(scanTask), "");
+
+    QFile file(scanTask);
+    if (file.open(QIODevice::ReadOnly)) {
+        const auto json = QJsonDocument::fromJson(file.readAll());
+        file.close();
+
+        const auto dataTask = json["dataDiscoveryTask"];
+        if (!dataTask.isNull()) {
+            const auto dlpContentDataList = json["dlpContentDataList"];
+            if (!dlpContentDataList.isNull()) {
+                const auto taskId = dataTask["taskId"].toString();
+
+                if (!taskId.isEmpty()) {
+                    return taskId;
+                }
+            }
+        }
+    }
+
+    return "";
+}
+
+std::shared_ptr<ScanTask> TaskManagerPrivate::getScanTask(const QString & scanTaskId)
+{
+    if (mScanTasks.contains(scanTaskId)) {
+        return mScanTasks[scanTaskId];
+    }
+    return nullptr;
 }
 
 TaskManager* TaskManager::getInstance()
@@ -121,9 +165,31 @@ bool TaskManager::parseScanTask(const QString & scanTask)
     return d->parseScanTask(scanTask);
 }
 
-void TaskManager::startScanTask()
+QString TaskManager::parseTaskId(const QString & scanTask)
 {
+    Q_D(TaskManager);
 
+    return d->parseTaskId(scanTask);
+}
+
+void TaskManager::startScanTask(const QString& scanTaskId)
+{
+    Q_D(TaskManager);
+
+    const auto scanTask = d->getScanTask(scanTaskId);
+    if (scanTask) {
+        d->mScanTaskThreadPool.start(scanTask.get());
+    }
+}
+
+void TaskManager::stopScanTask(const QString & scanTaskId)
+{
+    Q_D(TaskManager);
+
+    const auto scanTask = d->getScanTask(scanTaskId);
+    if (scanTask) {
+        scanTask->stop();
+    }
 }
 
 TaskManager::TaskManager()

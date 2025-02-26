@@ -77,6 +77,47 @@ void DataBase::initDB() const
     }
 }
 
+void DataBase::insertTask(const QString & taskId, const QString & taskName, const QString & scanDir, const QString & scanDirExp, const QString & scanExt, const QString & scanExtExp, int taskStatus, int scanMode) const
+{
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "INSERT INTO scan_task VALUES ("
+                                           ":task_id, :task_name,"
+                                           ":scan_task_dir, :scan_task_dir_exception,"
+                                           ":scan_task_file_ext, :scan_task_file_ext_exception,"
+                                           ":start_time, :stop_time,"
+                                           ":total_file, :finished_file,"
+                                           ":task_status, :scan_mode);");
+    try {
+        cmd.bind(":task_id", taskId);
+        cmd.bind(":task_name", taskName);
+        cmd.bind(":scan_task_dir", scanDir);
+        cmd.bind(":scan_task_dir_exception", scanDirExp);
+        cmd.bind(":scan_task_file_ext", scanExt);
+        cmd.bind(":scan_task_file_ext_exception", scanExtExp);
+        cmd.bind(":start_time", 0);
+        cmd.bind(":stop_time", 0);
+        cmd.bind(":total_file", 0);
+        cmd.bind(":finished_file", 0);
+        cmd.bind(":task_status", taskStatus);
+        cmd.bind(":scan_mode", scanMode);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to insert scan_task: " << e.what();
+    }
+}
+
+void DataBase::updateTaskStatus(const QString & taskId, int taskStatus)
+{
+}
+
+void DataBase::updateTotalFile(const QString & taskId, const QString & taskName)
+{
+}
+
+void DataBase::updateFinishedFile(const QString & taskId, const QString & taskName)
+{
+}
+
 DataBase::DataBase(QObject* parent)
     : QObject(parent), mDB(std::make_shared<sqlite3_wrap::Sqlite3>())
 {

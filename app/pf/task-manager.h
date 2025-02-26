@@ -18,7 +18,9 @@ public:
     TaskManager& operator=(const TaskManager&) = delete;
 
     bool parseScanTask(const QString &scanTask);
-    void startScanTask();
+    QString parseTaskId(const QString &scanTask);
+    void startScanTask(const QString &scanTaskId);
+    void stopScanTask(const QString &scanTaskId);
 
 private:
     TaskManager();
@@ -28,6 +30,5 @@ private:
     TaskManagerPrivate*             d_ptr;
     static TaskManager              gInstance;
 };
-
 
 #endif // andsec_scanner_TASK_MANAGER_H
