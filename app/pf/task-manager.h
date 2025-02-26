@@ -19,8 +19,10 @@ public:
 
     bool parseScanTask(const QString &scanTask);
     QString parseTaskId(const QString &scanTask);
-    void startScanTask(const QString &scanTaskId);
     void stopScanTask(const QString &scanTaskId);
+    void removeScanTask(const QString &scanTaskId);
+    void startScanTask(const QString &scanTaskId);
+    static QString getTaskIdByPolicyFile(const QString & policyFile);
 
 private:
     TaskManager();
@@ -30,5 +32,6 @@ private:
     TaskManagerPrivate*             d_ptr;
     static TaskManager              gInstance;
 };
+
 
 #endif // andsec_scanner_TASK_MANAGER_H

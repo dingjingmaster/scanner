@@ -105,6 +105,8 @@ private:
     QMap<QString, std::shared_ptr<PolicyGroup>>     mPolicies;
     QMap<int, std::shared_ptr<PolicyGroup>>         mPoliciesIdx;
     QList<int>                                      mPoliciesOrderIdx;
+
+    QSet<QString>                                   mFilesForScan;
 };
 
 

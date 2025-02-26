@@ -44,6 +44,7 @@ public:
     bool parseScanTask(const QString& scanTask);
     static QString parseTaskId(const QString& scanTask);
     std::shared_ptr<ScanTask> getScanTask(const QString& scanTaskId);
+    void removeScanTask(const QString& scanTaskId);
 
 private:
     TaskManager*                                q_ptr = nullptr;
@@ -153,6 +154,11 @@ std::shared_ptr<ScanTask> TaskManagerPrivate::getScanTask(const QString & scanTa
     return nullptr;
 }
 
+void TaskManagerPrivate::removeScanTask(const QString & scanTaskId)
+{
+    mScanTasks.remove(scanTaskId);
+}
+
 TaskManager* TaskManager::getInstance()
 {
     return &gInstance;
@@ -182,6 +188,13 @@ void TaskManager::startScanTask(const QString& scanTaskId)
     }
 }
 
+QString TaskManager::getTaskIdByPolicyFile(const QString & policyFile)
+{
+    QString taskId = policyFile.split("/").last();
+
+    return taskId.replace("scan-task-", "");
+}
+
 void TaskManager::stopScanTask(const QString & scanTaskId)
 {
     Q_D(TaskManager);
@@ -190,6 +203,13 @@ void TaskManager::stopScanTask(const QString & scanTaskId)
     if (scanTask) {
         scanTask->stop();
     }
+}
+
+void TaskManager::removeScanTask(const QString & scanTaskId)
+{
+    Q_D(TaskManager);
+
+    d->removeScanTask(scanTaskId);
 }
 
 TaskManager::TaskManager()

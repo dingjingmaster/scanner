@@ -4,14 +4,22 @@
 
 #include "task-base.h"
 
+#include <QDir>
 #include <QTimer>
 #include <QDebug>
+#include <QRegExp>
+#include <QFileInfo>
 #include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
 
 #include <unistd.h>
+#include <macros/macros.h>
+
+#include "utils.h"
+
+#define TASK_SCAN_LOG_INFO       qInfo() << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
 
 
 TaskBase::TaskBase(TaskType tp, const QString & taskId, const QString & taskName)
@@ -156,12 +164,106 @@ const QSet<QString> & ScanTask::getTaskBypassPath() const
 
 void ScanTask::scanFiles()
 {
-    // 检查是否存在，存在则读取，否则扫描
-    qInfo() << "ScanTask::scanFiles";
+    // @TODO:// 暂时把所有要扫描的文件路径保存到内存，后续保存到文件中，避免占用太多内存
+    TASK_SCAN_LOG_INFO << "Start scan files";
 
-    // 保存解析到的文件信息 sqlite3
+    auto getDirFiles = [=] (const QString & dir) ->QSet<QString> {
+        QSet<QString> files;
+        QStringList dirs;
+        dirs << dir;
+        for (int i = 0; i < dirs.size(); ++i) {
+            QFileInfo fi(dirs.at(i));
+            if (!fi.exists()) {continue;}
+            if (fi.isDir()) {
+                QDir ddir(dirs.at(i));
+                auto ds = ddir.entryList();
+                for (auto& j : ds) {
+                    if ("." == j || ".." == j) { continue; }
+                    QString p = QString("%1/%2").arg(fi.absoluteFilePath(), j);
+                    QFileInfo fii(p);
+                    if (fii.isDir()) { dirs.append(p); } else { files << Utils::formatPath(p); }
+                }
+            }
+            else {
+                files << Utils::formatPath(fi.absoluteFilePath());
+            }
+        }
+        return files;
+    };
+
+    // 检查是否存在，存在则读取，否则扫描
+    for (const auto& d : mTaskScanPath) {
+        if (d.startsWith("/bin/")
+            || d.startsWith("/boot/")
+            || d.startsWith("/dev/")
+            || d.startsWith("/efi/")
+            || d.startsWith("/etc/")
+            || d.startsWith("/lib/")
+            || d.startsWith("/lib64/")
+            || d.startsWith("/opt/")
+            || d.startsWith("/proc/")
+            || d.startsWith("/run/")
+            || d.startsWith("/sbin/")
+            || d.startsWith("/snap/")
+            || d.startsWith("/srv/")
+            || d.startsWith("/usr/")
+            || d.startsWith("/tmp/")
+            || d.startsWith("/var/")) {
+            TASK_SCAN_LOG_INFO << "跳过特殊路径: " << d;
+            continue;
+        }
+        TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
+        mFilesForScan += getDirFiles(d);
+    }
+
+    QRegExp tpReg;
+    QRegExp tpExpReg;
+    QRegExp dirExpReg;
+
+    // 去掉非扫描目录
+    QStringList lwDir;
+    for (const auto& d : mTaskBypassPath) {
+        lwDir << Utils::formatPath(d);
+    }
+    if (!lwDir.empty()) {
+        dirExpReg.setPattern(QString("(%1)").arg(lwDir.join("|")));
+    }
+    lwDir.clear();
+
+    // 去掉非关联扩展名
+    if (!mTaskBypassFileTypes.isEmpty()) {
+        tpExpReg.setPattern(QString("\\.(%1)$").arg(QStringList(mTaskBypassFileTypes.begin(), mTaskBypassFileTypes.end()).join("|")));
+    }
+
+    // 保留关联扩展名
+    if (!mTaskScanFileTypes.isEmpty()) {
+        tpReg.setPattern(QString("\\.(%1)$").arg(QStringList(mTaskScanFileTypes.begin(), mTaskScanFileTypes.end()).join("|")));
+    }
+
+    QStringList allFiles(mFilesForScan.begin(), mFilesForScan.end());
+    mFilesForScan.clear();
+    for (const auto& d : allFiles) {
+        if (dirExpReg.exactMatch(d)) {
+            TASK_SCAN_LOG_INFO << "不需要扫描(例外路径): " << d;
+            mFilesForScan.remove(d);
+        }
+        else if (tpExpReg.exactMatch(d)) {
+            TASK_SCAN_LOG_INFO << "不需要扫描(例外类型): " << d;
+            mFilesForScan.remove(d);
+        }
+        else if (!tpReg.exactMatch(d)) {
+            TASK_SCAN_LOG_INFO << "不需要扫描(非扫描类型): " << d;
+            mFilesForScan.remove(d);
+        }
+        else {
+            TASK_SCAN_LOG_INFO << "需要扫描: " << d;
+        }
+    }
+    mFilesForScan = QSet<QString>(allFiles.begin(), allFiles.end());
+    allFiles.clear();
 
     // 解析文件内容 并 扫描
+    TASK_SCAN_LOG_INFO << "Finish scan files";
 }
 
 void ScanTask::stop()
@@ -181,7 +283,9 @@ void ScanTask::stop()
 
 void ScanTask::run()
 {
-    qInfo() << "Task: " << getTaskId() << " name: " << getTaskName() << " RUNNING!";
+    C_RETURN_IF_OK(mIsRunning);
+
+    TASK_SCAN_LOG_INFO << "Running";
     mTaskStatus = ScanTaskStatus::Running;
     scanFiles();
 
@@ -189,10 +293,12 @@ void ScanTask::run()
         usleep(1000 * 1000 * 5);
         if (mTaskStatus == ScanTaskStatus::Stop) {
             mTaskStatus = ScanTaskStatus::Stopped;
-            qInfo() << "Task: " << getTaskId() << " name: " << getTaskName() << " STOPPED!";
+            mIsRunning = false;
+            TASK_SCAN_LOG_INFO << "Stopped";
             break;
         }
         else if (mTaskStatus == ScanTaskStatus::Running) {
+            mIsRunning = true;
             // 取xxx文件， 开始扫描
             // 获取要扫描的文件 并 开始扫描
         }

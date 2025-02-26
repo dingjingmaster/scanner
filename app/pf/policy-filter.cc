@@ -42,14 +42,15 @@ PolicyFilter::PolicyFilter(int argc, char ** argv)
                 qWarning() << "Unrecognized policy file: " << f;
             }
         }
-    });
-    mTimer->setInterval(1000 * 5);
 
-    connect(this, &PolicyFilter::scanStart, this, [this]() {
-        for (auto& t : mPolicyFile) {
-
+        for (const auto &f : mPolicyFile.keys()) {
+            if (!QFile::exists(f)) {
+                TaskManager::getInstance()->stopScanTask(TaskManager::getTaskIdByPolicyFile(f));
+                TaskManager::getInstance()->removeScanTask(TaskManager::getTaskIdByPolicyFile(f));
+            }
         }
     });
+    mTimer->setInterval(1000 * 5);
 }
 
 void PolicyFilter::start() const
