@@ -74,7 +74,6 @@ public:
     const QSet<QString>& getBypassFileType() const;
     const QSet<QString>& getTaskBypassPath() const;
 
-    void scanFiles();
     void stop();
     void run() override;
 
@@ -90,6 +89,10 @@ public:
     void setFileTypeList(const QString& fileTypeList);
     void setBypassFileType(const QString& bypassFileType);
     void setTaskBypassPath(const QString& taskBypassPath);
+
+private:
+    void scanFiles();
+    QString popOneFile();
 
 private:
     std::atomic_bool                                mIsRunning;

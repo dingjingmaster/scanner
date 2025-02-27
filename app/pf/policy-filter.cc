@@ -8,9 +8,9 @@
 #include <QDebug>
 #include <QCryptographicHash>
 
+#include "utils.h"
 #include "data-base.h"
 #include "task-manager.h"
-#include "utils.h"
 #include "../macros/macros.h"
 
 

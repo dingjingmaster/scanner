@@ -117,7 +117,10 @@ void ScanTask::setFileTypeList(const QString & fileTypeList)
     const auto jsonDoc = QJsonDocument::fromJson(fileTypeList.toUtf8());
 
     for (auto ff : jsonDoc.array()) {
-        mTaskScanFileTypes << ff.toObject()["v"].toString();
+        const auto ts = ff.toObject()["v"].toString().split("|");
+        for (const auto t : ts) {
+            mTaskScanFileTypes << t;
+        }
     }
 }
 
@@ -131,7 +134,10 @@ void ScanTask::setBypassFileType(const QString & bypassFileType)
     const auto jsonDoc = QJsonDocument::fromJson(bypassFileType.toUtf8());
 
     for (auto ff : jsonDoc.array()) {
-        mTaskBypassFileTypes << ff.toObject()["v"].toString();
+        const auto ts = ff.toObject()["v"].toString().split("|");
+        for (const auto t : ts) {
+            mTaskBypassFileTypes << t;
+        }
     }
 }
 
@@ -142,6 +148,10 @@ const QSet<QString> & ScanTask::getBypassFileType() const
 
 void ScanTask::setTaskScanPath(const QString & taskScanPath)
 {
+    if (taskScanPath.isNull() || taskScanPath.isEmpty()) {
+        mTaskScanPath << "/";
+        return;
+    }
     const auto ls = taskScanPath.split("|");
     mTaskScanPath = QSet<QString>(ls.begin(), ls.end());
 }
@@ -166,6 +176,12 @@ void ScanTask::scanFiles()
 {
     // @TODO:// 暂时把所有要扫描的文件路径保存到内存，后续保存到文件中，避免占用太多内存
     TASK_SCAN_LOG_INFO << "Start scan files";
+
+    auto isInScan = [&] (const QString& path) ->bool {
+        // 检查是否是例外文件夹
+        // 检查是否是扫描扩展类型
+        // 检查是否是例外扩展类型
+    };
 
     auto getDirFiles = [=] (const QString & dir) ->QSet<QString> {
         QSet<QString> files;
@@ -216,8 +232,6 @@ void ScanTask::scanFiles()
         mFilesForScan += getDirFiles(d);
     }
 
-    QRegExp tpReg;
-    QRegExp tpExpReg;
     QRegExp dirExpReg;
 
     // 去掉非扫描目录
@@ -226,33 +240,16 @@ void ScanTask::scanFiles()
         lwDir << Utils::formatPath(d);
     }
     if (!lwDir.empty()) {
+        TASK_SCAN_LOG_INFO << lwDir.join("|");
         dirExpReg.setPattern(QString("(%1)").arg(lwDir.join("|")));
     }
     lwDir.clear();
-
-    // 去掉非关联扩展名
-    if (!mTaskBypassFileTypes.isEmpty()) {
-        tpExpReg.setPattern(QString("\\.(%1)$").arg(QStringList(mTaskBypassFileTypes.begin(), mTaskBypassFileTypes.end()).join("|")));
-    }
-
-    // 保留关联扩展名
-    if (!mTaskScanFileTypes.isEmpty()) {
-        tpReg.setPattern(QString("\\.(%1)$").arg(QStringList(mTaskScanFileTypes.begin(), mTaskScanFileTypes.end()).join("|")));
-    }
 
     QStringList allFiles(mFilesForScan.begin(), mFilesForScan.end());
     mFilesForScan.clear();
     for (const auto& d : allFiles) {
         if (dirExpReg.exactMatch(d)) {
             TASK_SCAN_LOG_INFO << "不需要扫描(例外路径): " << d;
-            mFilesForScan.remove(d);
-        }
-        else if (tpExpReg.exactMatch(d)) {
-            TASK_SCAN_LOG_INFO << "不需要扫描(例外类型): " << d;
-            mFilesForScan.remove(d);
-        }
-        else if (!tpReg.exactMatch(d)) {
-            TASK_SCAN_LOG_INFO << "不需要扫描(非扫描类型): " << d;
             mFilesForScan.remove(d);
         }
         else {
@@ -264,6 +261,18 @@ void ScanTask::scanFiles()
 
     // 解析文件内容 并 扫描
     TASK_SCAN_LOG_INFO << "Finish scan files";
+}
+
+QString ScanTask::popOneFile()
+{
+    QString f = "";
+    if (!mFilesForScan.isEmpty()) {
+        const auto it = mFilesForScan.begin();
+        f = *it;
+        mFilesForScan.remove(*it);
+    }
+
+    return f;
 }
 
 void ScanTask::stop()
@@ -299,6 +308,8 @@ void ScanTask::run()
         }
         else if (mTaskStatus == ScanTaskStatus::Running) {
             mIsRunning = true;
+            const auto fc = popOneFile();
+            TASK_SCAN_LOG_INFO << "Scann file: " << fc;
             // 取xxx文件， 开始扫描
             // 获取要扫描的文件 并 开始扫描
         }
