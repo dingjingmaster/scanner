@@ -133,7 +133,8 @@ void DataBase::updateTaskTable(const QString & taskId, const QString & filePath,
 {
     if (checkTaskTableFileExists(taskId, filePath)) {
         if (!md5.isNull() && !md5.isEmpty() && "" != md5) {
-            sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5 FROM T%1;").arg(taskId));
+            sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5 FROM T%1 WHERE file_path = ?;").arg(taskId));
+            query.bind(0, filePath);
             const auto iter = query.begin();
             const auto md5S = (*iter).get<QString>(0);
             if (md5S == md5) {
@@ -142,7 +143,7 @@ void DataBase::updateTaskTable(const QString & taskId, const QString & filePath,
             }
             query.finish();
 
-            const sqlite3_wrap::Sqlite3Command cmd(*mDB, QString("UPDATE T%1 SET file_md5 = '?', is_finished = 0 WHERE file_path = '?';")
+            const sqlite3_wrap::Sqlite3Command cmd(*mDB, QString("UPDATE T%1 SET file_md5 = ?, is_finished = 0 WHERE file_path = ?;")
                                                 .arg(taskId).toUtf8().constData());
             try {
                 cmd.bind(1, md5);
