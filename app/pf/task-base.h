@@ -98,8 +98,7 @@ public:
 private:
     void scanFiles();
     void taskFinished();
-    QString popOneFile();
-    bool checkFileChanged();
+    bool pop100File(QMap<QString, QString>& fileMap) const;
 
 private:
     bool                                            mFinishedOneTime = false;
@@ -118,8 +117,6 @@ private:
     QMap<QString, std::shared_ptr<PolicyGroup>>     mPolicies;
     QMap<int, std::shared_ptr<PolicyGroup>>         mPoliciesIdx;
     QList<int>                                      mPoliciesOrderIdx;
-
-    QSet<QString>                                   mFilesForScan;
 };
 
 

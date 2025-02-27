@@ -271,18 +271,26 @@ void ScanTask::scanFiles()
         return files;
     };
 
+    QSet<QString> filesForScan;
+
     // 检查是否存在，存在则读取，否则扫描
     for (const auto& d : mTaskScanPath) {
         // TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
         if (isInScanDir(d)) {
-            mFilesForScan += getDirFiles(d);
+            filesForScan += getDirFiles(d);
         }
         else {
             TASK_SCAN_LOG_INFO << "例外文件夹: " << d;
         }
     }
 
-    // 保存
+    // 保存 所有 要扫描的文件
+    DataBase::getInstance().createTaskTable(getTaskId());
+    for (const auto& d : filesForScan) {
+        DataBase::getInstance().updateTaskTable(getTaskId(), Utils::formatPath(d), "");
+    }
+    DataBase::getInstance().updateTotalFile(getTaskId(), filesForScan.size());
+    TASK_SCAN_LOG_INFO << "All files: " << filesForScan.size();
 
     // 解析文件内容 并 扫描
     TASK_SCAN_LOG_INFO << "Finish scan files";
@@ -295,21 +303,11 @@ void ScanTask::taskFinished()
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
 }
 
-bool ScanTask::checkFileChanged()
+bool ScanTask::pop100File(QMap<QString, QString> & fileMap) const
 {
-    return true;
-}
+    fileMap.clear();
 
-QString ScanTask::popOneFile()
-{
-    QString f;
-    if (!mFilesForScan.isEmpty()) {
-        const auto it = mFilesForScan.begin();
-        f = *it;
-        mFilesForScan.remove(*it);
-    }
-
-    return f;
+    return DataBase::getInstance().get100FileByTaskId(getTaskId(), fileMap);
 }
 
 void ScanTask::stop()
@@ -334,8 +332,6 @@ void ScanTask::run()
     TASK_SCAN_LOG_INFO << "Running";
     mTaskStatus = ScanTaskStatus::Running;
     scanFiles();
-    DataBase::getInstance().updateTotalFile(getTaskId(), mFilesForScan.size());
-    TASK_SCAN_LOG_INFO << "All files: " << mFilesForScan.size();
 
     while (true) {
         if (mTaskStatus == ScanTaskStatus::Stop) {
@@ -347,17 +343,24 @@ void ScanTask::run()
         }
         else if (mTaskStatus == ScanTaskStatus::Running) {
             mIsRunning = true;
-            const auto fc = popOneFile();
-            if (fc.isNull() || fc.isEmpty()) {
-                taskFinished();
-                TASK_SCAN_LOG_INFO << "Finish scan files";
+            QMap<QString, QString> fileMap;
+            if (pop100File(fileMap)) {
+                if (fileMap.size() <= 0) {
+                    taskFinished();
+                    TASK_SCAN_LOG_INFO << "Finish scan files";
+                    continue;
+                }
+
+                for (const auto& f : fileMap.keys()) {
+                    TASK_SCAN_LOG_INFO << "Scann file: " << f;
+                    // 取xxx文件， 开始扫描
+                    // 获取要扫描的文件 并 开始扫描
+                }
             }
-            TASK_SCAN_LOG_INFO << "Scann file: " << fc;
-            // 取xxx文件， 开始扫描
-            // 获取要扫描的文件 并 开始扫描
         }
         else if (mTaskStatus == ScanTaskStatus::Finished) {
             // 增量扫描
+            usleep(1000 * 1000 * 10);
         }
         else {
             usleep(1000 * 1000 * 5);
