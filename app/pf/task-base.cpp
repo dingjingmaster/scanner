@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <macros/macros.h>
 
+#include "data-base.h"
 #include "utils.h"
 
 #define TASK_SCAN_LOG_INFO       qInfo() << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
@@ -118,7 +119,7 @@ void ScanTask::setFileTypeList(const QString & fileTypeList)
 
     for (auto ff : jsonDoc.array()) {
         const auto ts = ff.toObject()["v"].toString().split("|");
-        for (const auto t : ts) {
+        for (const auto& t : ts) {
             mTaskScanFileTypes << t;
         }
     }
@@ -135,7 +136,7 @@ void ScanTask::setBypassFileType(const QString & bypassFileType)
 
     for (auto ff : jsonDoc.array()) {
         const auto ts = ff.toObject()["v"].toString().split("|");
-        for (const auto t : ts) {
+        for (const auto& t : ts) {
             mTaskBypassFileTypes << t;
         }
     }
@@ -153,7 +154,9 @@ void ScanTask::setTaskScanPath(const QString & taskScanPath)
         return;
     }
     const auto ls = taskScanPath.split("|");
-    mTaskScanPath = QSet<QString>(ls.begin(), ls.end());
+    for (const auto& t : ls) {
+        mTaskScanPath << Utils::formatPath(t);
+    }
 }
 
 const QSet<QString> & ScanTask::getTaskScanPath() const
@@ -164,7 +167,11 @@ const QSet<QString> & ScanTask::getTaskScanPath() const
 void ScanTask::setTaskBypassPath(const QString & taskBypassPath)
 {
     const auto ls = taskBypassPath.split("|");
-    mTaskBypassPath = QSet<QString>(ls.begin(), ls.end());
+    for (const auto& t : ls) {
+        if (!t.isNull() && !t.isEmpty()) {
+            mTaskBypassPath << Utils::formatPath(t);
+        }
+    }
 }
 
 const QSet<QString> & ScanTask::getTaskBypassPath() const
@@ -177,10 +184,64 @@ void ScanTask::scanFiles()
     // @TODO:// 暂时把所有要扫描的文件路径保存到内存，后续保存到文件中，避免占用太多内存
     TASK_SCAN_LOG_INFO << "Start scan files";
 
+    auto isInScanDir = [&](const QString & path) -> bool {
+        C_RETURN_VAL_IF_OK("/" == path, true);
+        QString dir = path;
+        if (!dir.endsWith("/")) {
+            dir += "/";
+        }
+        if (dir.startsWith("/bin/")
+            || dir.startsWith("/boot/")
+            || dir.startsWith("/dev/")
+            || dir.startsWith("/efi/")
+            || dir.startsWith("/etc/")
+            || dir.startsWith("/lib/")
+            || dir.startsWith("/lib64/")
+            || dir.startsWith("/opt/")
+            || dir.startsWith("/proc/")
+            || dir.startsWith("/run/")
+            || dir.startsWith("/sbin/")
+            || dir.startsWith("/snap/")
+            || dir.startsWith("/srv/")
+            || dir.startsWith("/sys/")
+            || dir.startsWith("/usr/")
+            || dir.startsWith("/tmp/")
+            || dir.startsWith("/var/")) {
+            TASK_SCAN_LOG_INFO << "跳过特殊文件夹: " << path;
+            return false;
+        }
+        return true;
+    };
+
     auto isInScan = [&] (const QString& path) ->bool {
+        if (path.startsWith("/bin/")
+            || path.startsWith("/boot/")
+            || path.startsWith("/dev/")
+            || path.startsWith("/efi/")
+            || path.startsWith("/etc/")
+            || path.startsWith("/lib/")
+            || path.startsWith("/lib64/")
+            || path.startsWith("/opt/")
+            || path.startsWith("/proc/")
+            || path.startsWith("/run/")
+            || path.startsWith("/sbin/")
+            || path.startsWith("/snap/")
+            || path.startsWith("/srv/")
+            || path.startsWith("/sys/")
+            || path.startsWith("/usr/")
+            || path.startsWith("/tmp/")
+            || path.startsWith("/var/")) {
+            TASK_SCAN_LOG_INFO << "跳过特殊文件: " << path;
+            return false;
+        }
         // 检查是否是例外文件夹
-        // 检查是否是扫描扩展类型
-        // 检查是否是例外扩展类型
+        for (const auto& t : mTaskBypassPath) {
+            if (path.startsWith(t)) {
+                TASK_SCAN_LOG_INFO << "例外路径: " << t;
+                return false;
+            }
+        }
+        return true;
     };
 
     auto getDirFiles = [=] (const QString & dir) ->QSet<QString> {
@@ -189,19 +250,22 @@ void ScanTask::scanFiles()
         dirs << dir;
         for (int i = 0; i < dirs.size(); ++i) {
             QFileInfo fi(dirs.at(i));
-            if (!fi.exists()) {continue;}
-            if (fi.isDir()) {
+            if (!fi.exists()) { TASK_SCAN_LOG_INFO << "文件夹不存在: " << fi.absolutePath(); continue;}
+            if (!isInScanDir(fi.absolutePath())) { continue; }
+            if (fi.isDir() && !fi.isSymbolicLink()) {
                 QDir ddir(dirs.at(i));
+                // TASK_SCAN_LOG_INFO << "正在遍历文件夹: " << ddir.absolutePath();
                 auto ds = ddir.entryList();
                 for (auto& j : ds) {
                     if ("." == j || ".." == j) { continue; }
-                    QString p = QString("%1/%2").arg(fi.absoluteFilePath(), j);
+                    QString p = Utils::formatPath(QString("%1/%2").arg(fi.absoluteFilePath(), j));
                     QFileInfo fii(p);
-                    if (fii.isDir()) { dirs.append(p); } else { files << Utils::formatPath(p); }
+                    if (fii.isDir()) { if (isInScanDir(p)) { dirs.append(p); }} else { if (isInScan(p)) files << p; }
                 }
             }
             else {
-                files << Utils::formatPath(fi.absoluteFilePath());
+                auto ppp = Utils::formatPath(fi.absoluteFilePath());
+                if (isInScan(ppp)) { files << ppp; }
             }
         }
         return files;
@@ -209,63 +273,36 @@ void ScanTask::scanFiles()
 
     // 检查是否存在，存在则读取，否则扫描
     for (const auto& d : mTaskScanPath) {
-        if (d.startsWith("/bin/")
-            || d.startsWith("/boot/")
-            || d.startsWith("/dev/")
-            || d.startsWith("/efi/")
-            || d.startsWith("/etc/")
-            || d.startsWith("/lib/")
-            || d.startsWith("/lib64/")
-            || d.startsWith("/opt/")
-            || d.startsWith("/proc/")
-            || d.startsWith("/run/")
-            || d.startsWith("/sbin/")
-            || d.startsWith("/snap/")
-            || d.startsWith("/srv/")
-            || d.startsWith("/usr/")
-            || d.startsWith("/tmp/")
-            || d.startsWith("/var/")) {
-            TASK_SCAN_LOG_INFO << "跳过特殊路径: " << d;
-            continue;
-        }
-        TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
-        mFilesForScan += getDirFiles(d);
-    }
-
-    QRegExp dirExpReg;
-
-    // 去掉非扫描目录
-    QStringList lwDir;
-    for (const auto& d : mTaskBypassPath) {
-        lwDir << Utils::formatPath(d);
-    }
-    if (!lwDir.empty()) {
-        TASK_SCAN_LOG_INFO << lwDir.join("|");
-        dirExpReg.setPattern(QString("(%1)").arg(lwDir.join("|")));
-    }
-    lwDir.clear();
-
-    QStringList allFiles(mFilesForScan.begin(), mFilesForScan.end());
-    mFilesForScan.clear();
-    for (const auto& d : allFiles) {
-        if (dirExpReg.exactMatch(d)) {
-            TASK_SCAN_LOG_INFO << "不需要扫描(例外路径): " << d;
-            mFilesForScan.remove(d);
+        // TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
+        if (isInScanDir(d)) {
+            mFilesForScan += getDirFiles(d);
         }
         else {
-            TASK_SCAN_LOG_INFO << "需要扫描: " << d;
+            TASK_SCAN_LOG_INFO << "例外文件夹: " << d;
         }
     }
-    mFilesForScan = QSet<QString>(allFiles.begin(), allFiles.end());
-    allFiles.clear();
+
+    // 保存
 
     // 解析文件内容 并 扫描
     TASK_SCAN_LOG_INFO << "Finish scan files";
 }
 
+void ScanTask::taskFinished()
+{
+    mTaskStatus = ScanTaskStatus::Finished;
+    DataBase::getInstance().updateTaskStatusFinished(getTaskId());
+    DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
+}
+
+bool ScanTask::checkFileChanged()
+{
+    return true;
+}
+
 QString ScanTask::popOneFile()
 {
-    QString f = "";
+    QString f;
     if (!mFilesForScan.isEmpty()) {
         const auto it = mFilesForScan.begin();
         f = *it;
@@ -297,21 +334,33 @@ void ScanTask::run()
     TASK_SCAN_LOG_INFO << "Running";
     mTaskStatus = ScanTaskStatus::Running;
     scanFiles();
+    DataBase::getInstance().updateTotalFile(getTaskId(), mFilesForScan.size());
+    TASK_SCAN_LOG_INFO << "All files: " << mFilesForScan.size();
 
     while (true) {
-        usleep(1000 * 1000 * 5);
         if (mTaskStatus == ScanTaskStatus::Stop) {
             mTaskStatus = ScanTaskStatus::Stopped;
             mIsRunning = false;
+            DataBase::getInstance().updateTaskStatusStopped(getTaskId());
             TASK_SCAN_LOG_INFO << "Stopped";
             break;
         }
         else if (mTaskStatus == ScanTaskStatus::Running) {
             mIsRunning = true;
             const auto fc = popOneFile();
+            if (fc.isNull() || fc.isEmpty()) {
+                taskFinished();
+                TASK_SCAN_LOG_INFO << "Finish scan files";
+            }
             TASK_SCAN_LOG_INFO << "Scann file: " << fc;
             // 取xxx文件， 开始扫描
             // 获取要扫描的文件 并 开始扫描
+        }
+        else if (mTaskStatus == ScanTaskStatus::Finished) {
+            // 增量扫描
+        }
+        else {
+            usleep(1000 * 1000 * 5);
         }
     }
 }
@@ -374,6 +423,31 @@ int ScanTask::getAttachmentReport() const
     return mAttachmentReport;
 }
 
+QString ScanTask::getTaskScanPathStr() const
+{
+    return QStringList(mTaskScanPath.begin(), mTaskScanPath.end()).join("{]");
+}
+
+QString ScanTask::getPolicyIdListStr() const
+{
+    return QStringList(mPolicyIdList.begin(), mPolicyIdList.end()).join("{]");
+}
+
+QString ScanTask::getFileTypeListStr() const
+{
+    return QStringList(mTaskScanFileTypes.begin(), mTaskScanFileTypes.end()).join("{]");
+}
+
+QString ScanTask::getBypassFileTypeStr() const
+{
+    return QStringList(mTaskBypassFileTypes.begin(), mTaskBypassFileTypes.end()).join("{]");
+}
+
+QString ScanTask::getTaskBypassPathStr() const
+{
+    return QStringList(mTaskBypassPath.begin(), mTaskBypassPath.end()).join("{]");
+}
+
 void ScanTask::parseRules(const QJsonArray & arr)
 {
     for (auto f : arr) {
@@ -402,7 +476,7 @@ void ScanTask::parseRules(const QJsonArray & arr)
             }
         }
     }
+
+    DataBase::getInstance().updateStartTime(getTaskId(), QDateTime::currentDateTime());
 }
-
-
 

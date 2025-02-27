@@ -7,7 +7,7 @@
 #include <QFile>
 #include <QCryptographicHash>
 
-#include "macros/macros.h"
+#include "../macros/macros.h"
 
 
 QString Utils::formatPath(const QString & path)

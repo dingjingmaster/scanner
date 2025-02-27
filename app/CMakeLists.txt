@@ -8,6 +8,6 @@ add_executable(andsec-scanner main.cpp
 
         sqlite3-wrap/src/sqlite3-wrap.cc sqlite3-wrap/src/sqlite3-wrap.h
 )
-target_include_directories(andsec-scanner PUBLIC ${QT5_INCLUDE_DIRS} ${SQLITE3_INCLUDE_DIRS} ${GIO_INCLUDE_DIRS})
+target_include_directories(andsec-scanner PUBLIC ${QT5_INCLUDE_DIRS} ${SQLITE3_INCLUDE_DIRS} ${GIO_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
 target_link_libraries(andsec-scanner PUBLIC ${QT5_LIBRARIES} ${SQLITE3_LIBRARIES} ${GIO_LIBRARIES})
 target_compile_options(andsec-scanner PUBLIC -fPIC)

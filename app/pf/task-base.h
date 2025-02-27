@@ -68,6 +68,11 @@ public:
     int getTaskStatusInt() const;
     int getTaskScanModeInt() const;
     void parseRules(const QJsonArray& arr);
+    QString getTaskScanPathStr() const;
+    QString getPolicyIdListStr() const;
+    QString getFileTypeListStr() const;
+    QString getBypassFileTypeStr() const;
+    QString getTaskBypassPathStr() const;
     const QSet<QString>& getTaskScanPath() const;
     const QSet<QString>& getPolicyIdList() const;
     const QSet<QString>& getFileTypeList() const;
@@ -92,9 +97,14 @@ public:
 
 private:
     void scanFiles();
+    void taskFinished();
     QString popOneFile();
+    bool checkFileChanged();
 
 private:
+    bool                                            mFinishedOneTime = false;
+    int                                             mTotalNum;
+    int                                             mFinishedNum;
     std::atomic_bool                                mIsRunning;
     int                                             mAttachmentReport;      // 附件上报 MB
     int                                             mProgressRate;
@@ -111,6 +121,7 @@ private:
 
     QSet<QString>                                   mFilesForScan;
 };
+
 
 
 

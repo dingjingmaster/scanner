@@ -109,8 +109,8 @@ bool TaskManagerPrivate::parseScanTask(const QString & scanTask)
                     scanTaskPtr->parseRules(dlpContentDataList.toArray());
                     mScanTasks[taskId] = scanTaskPtr;
                     DataBase::getInstance().insertTask(taskId, taskName,
-                        scanPath, bypassScanPath,
-                        fileTypeList, bypassFileTypeList,
+                        scanTaskPtr->getTaskScanPathStr(), scanTaskPtr->getTaskBypassPathStr(),
+                        scanTaskPtr->getFileTypeListStr(), scanTaskPtr->getBypassFileTypeStr(),
                         scanTaskPtr->getTaskStatusInt(), scanTaskPtr->getTaskScanModeInt());
                     return true;
                 }

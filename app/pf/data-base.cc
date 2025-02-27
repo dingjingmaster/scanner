@@ -25,6 +25,7 @@
     "   `finished_file`                 INTEGER         DEFAULT 0       NOT NULL," \
     "   `task_status`                   TINYINT         DEFAULT 0       NOT NULL," \
     "   `scan_mode`                     TINYINT         DEFAULT 0       NOT NULL," \
+    "   `is_first`                      TINYINT         DEFAULT 0       NOT NULL," \
     "   PRIMARY KEY (task_id) " \
     ");"
 
@@ -37,7 +38,6 @@
     "   `file_type`                     VARCHAR         DEFAULT ''      NOT NULL," \
     "   `file_ext_name`                 VARCHAR                         NOT NULL," \
     "   `file_size`                     INTEGER                         NOT NULL," \
-    "   `is_finished`                   TINYINT         DEFAULT 0       NOT NULL," \
     "   PRIMARY KEY (file_path)" \
     ");"
 
@@ -85,7 +85,8 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName, cons
                                            ":scan_task_file_ext, :scan_task_file_ext_exception,"
                                            ":start_time, :stop_time,"
                                            ":total_file, :finished_file,"
-                                           ":task_status, :scan_mode);");
+                                           ":task_status, :scan_mode, :is_first"
+                                           ");");
     try {
         cmd.bind(":task_id", taskId);
         cmd.bind(":task_name", taskName);
@@ -99,6 +100,7 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName, cons
         cmd.bind(":finished_file", 0);
         cmd.bind(":task_status", taskStatus);
         cmd.bind(":scan_mode", scanMode);
+        cmd.bind(":is_first", 1);
         cmd.execute();
     }
     catch (std::exception& e) {
@@ -106,16 +108,104 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName, cons
     }
 }
 
-void DataBase::updateTaskStatus(const QString & taskId, int taskStatus)
+void DataBase::updateTotalFile(const QString & taskId, qint64 totalFile) const
 {
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET total_file=? WHERE task_id=?;");
+    try {
+        cmd.bind(1, totalFile);
+        cmd.bind(2, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
 }
 
-void DataBase::updateTotalFile(const QString & taskId, const QString & taskName)
+void DataBase::updateFinishedFile(const QString & taskId, qint64 finishedFile) const
 {
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET finished_file=? WHERE task_id=?;");
+    try {
+        cmd.bind(1, finishedFile);
+        cmd.bind(2, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
 }
 
-void DataBase::updateFinishedFile(const QString & taskId, const QString & taskName)
+void DataBase::updateStartTime(const QString & taskId, const QDateTime& startTime) const
 {
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET start_time=? WHERE task_id=?;");
+    try {
+        cmd.bind(1, startTime.toMSecsSinceEpoch());
+        cmd.bind(2, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
+}
+
+void DataBase::updateStopTime(const QString & taskId, const QDateTime& stopTime) const
+{
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET stop_time=? WHERE task_id=?;");
+    try {
+        cmd.bind(1, stopTime.toMSecsSinceEpoch());
+        cmd.bind(2, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
+}
+
+void DataBase::updateTaskStatusPause(const QString & taskId) const
+{
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=4 WHERE task_id=?;");
+    try {
+        cmd.bind(1, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
+}
+
+void DataBase::updateTaskStatusRunning(const QString & taskId) const
+{
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=1 WHERE task_id=?;");
+    try {
+        cmd.bind(1, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
+}
+
+void DataBase::updateTaskStatusStopped(const QString & taskId) const
+{
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=2 WHERE task_id=?;");
+    try {
+        cmd.bind(1, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
+}
+
+void DataBase::updateTaskStatusFinished(const QString & taskId) const
+{
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=3 WHERE task_id=?;");
+    try {
+        cmd.bind(1, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
 }
 
 DataBase::DataBase(QObject* parent)
