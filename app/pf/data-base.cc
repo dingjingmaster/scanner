@@ -168,7 +168,7 @@ void DataBase::updateTaskTable(const QString & taskId, const QString & filePath,
     }
 }
 
-bool DataBase::get100FileByTaskId(const QString & taskId, QMap<QString, QString> files) const
+bool DataBase::get100FileByTaskId(const QString & taskId, QMap<QString, QString>& files) const
 {
     sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_path, file_md5 FROM T%1 WHERE is_finished = 0 LIMIT 100;").arg(taskId));
     for (auto it = query.begin(); it != query.end(); ++it) {

@@ -41,7 +41,7 @@ public:
 
     // task table
     void createTaskTable(const QString& taskId) const;
-    bool get100FileByTaskId(const QString& taskId, QMap<QString, QString> files) const;
+    bool get100FileByTaskId(const QString& taskId, QMap<QString, QString>& files) const;
     bool checkTaskTableFileExists(const QString& taskId, const QString& filePath) const;
     void updateTaskTable(const QString& taskId, const QString& filePath, const QString& md5) const;
 

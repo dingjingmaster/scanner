@@ -331,7 +331,7 @@ void ScanTask::run()
 
     TASK_SCAN_LOG_INFO << "Running";
     mTaskStatus = ScanTaskStatus::Running;
-    scanFiles();
+    // scanFiles();
 
     while (true) {
         if (mTaskStatus == ScanTaskStatus::Stop) {
