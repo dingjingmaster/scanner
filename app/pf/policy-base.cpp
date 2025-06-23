@@ -678,6 +678,11 @@ void PolicyGroup::parseRule(const QJsonArray& rule)
     }
 }
 
+QString PolicyGroup::getPolicyGroupName() const
+{
+    return mName;
+}
+
 void PolicyGroup::setDescription(const QString & desc)
 {
     mDescription = desc;
@@ -745,5 +750,10 @@ void PolicyGroup::setOrder(int order)
 int PolicyGroup::getOrder() const
 {
     return mOrder;
+}
+
+bool PolicyGroup::match(const QString& filePath, QList<QString>& ctx, QMap<QString, QString>& res)
+{
+    return false;
 }
 

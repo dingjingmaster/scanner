@@ -12,6 +12,7 @@
 #include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QTemporaryDir>
 #include <QJsonDocument>
 
 #include <unistd.h>
@@ -19,8 +20,10 @@
 
 #include "data-base.h"
 #include "utils.h"
+#include "tika-wrap/src/java-env.h"
 
 #define TASK_SCAN_LOG_INFO       qInfo() << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
+#define TASK_SCAN_LOG_WARN       qWarning() << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
 
 
 TaskBase::TaskBase(TaskType tp, const QString & taskId, const QString & taskName)
@@ -192,7 +195,6 @@ void ScanTask::scanFiles()
         }
         if (dir.startsWith("/bin/")
             || dir.startsWith("/boot/")
-            || dir.startsWith("/data/")         // FIXME:// DJ-测试时候
             || dir.startsWith("/dev/")
             || dir.startsWith("/efi/")
             || dir.startsWith("/etc/")
@@ -218,7 +220,6 @@ void ScanTask::scanFiles()
         if (path.startsWith("/bin/")
             || path.startsWith("/boot/")
             || path.startsWith("/dev/")
-            || path.startsWith("/data/")            // FIXME:// DJ-
             || path.startsWith("/efi/")
             || path.startsWith("/etc/")
             || path.startsWith("/lib/")
@@ -326,12 +327,67 @@ void ScanTask::fileScanFinished(const QString& path, const QString& md5, bool is
     DataBase::getInstance().updateTaskTable(getTaskId(), path, md5, true);
 
     // TODO:// 更新 结果表状态
+    if (isHit) {
+        // 保存到扫描结果里
+    }
 }
 
-QString ScanTask::getTaskTmpMd5(const QString& filePath) const
+void ScanTask::scanFile(const QString& filePath)
 {
-    return DataBase::getInstance().getTaskFileMd5(getTaskId(), filePath);
+    if (!QFile::exists(filePath)) {
+        TASK_SCAN_LOG_INFO << "Not exists file: " << filePath;
+        return;
+    }
+
+    if (mPoliciesIdx.empty()) {
+        TASK_SCAN_LOG_WARN << "File " << filePath << " does not exist";
+        return;
+    }
+
+    TASK_SCAN_LOG_INFO << "Scann file: " << filePath;
+
+    // 提取文件内容
+    const QTemporaryDir tmpDir;
+    QString tmpDirPath = tmpDir.path();
+    if (!JavaEnv::getInstance()->parseFile(filePath, tmpDirPath)) {
+        TASK_SCAN_LOG_INFO << "Failed to parse file: " << filePath;
+        return;
+    }
+
+    QStringList files;
+    files << QString("%1/ctx.txt").arg(tmpDirPath);
+
+    // 获取扫描结果相关信息, md5、policy_id
+    const QString realMd5 = Utils::getFileMD5(filePath);
+
+    bool hasMatched = false;
+    QList<QString> ctx;
+    QMap<QString, QString> res;
+    for (auto i : mPoliciesOrderIdx) {
+        if (!mPoliciesIdx.contains(i)) {
+            TASK_SCAN_LOG_WARN << "Not found policy id: " << i;
+            continue;
+        }
+        const auto p = mPoliciesIdx[i];
+        for (auto& f : files) {
+            if (!p->match(f, ctx, res)) {
+                TASK_SCAN_LOG_INFO << "File " << f << " does not match idx: " << p->getPolicyGroupName();
+                continue;
+            }
+            hasMatched = true;
+        }
+    }
+
+    const QString& md5 = Utils::getFileMD5(filePath);
+
+    // 更新扫描状态
+    fileScanFinished(filePath, md5, hasMatched, QList<QString>());
 }
+
+// QString ScanTask::getTaskTmpMd5(const QString& filePath) const
+// {
+    // return DataBase::getInstance().getTaskFileMd5(getTaskId(), filePath);
+// }
 
 void ScanTask::stop()
 {
@@ -370,24 +426,13 @@ void ScanTask::run()
             if (pop100File(fileMap)) {
                 if (fileMap.size() <= 0) {
                     taskFinished();
-                    TASK_SCAN_LOG_INFO << "Finish scan files";
+                    TASK_SCAN_LOG_INFO << "Finish scan Task: " << getTaskId();
                     continue;
                 }
 
                 TASK_SCAN_LOG_INFO << "start scann '" << fileMap.size() << "' files ...";
                 for (const auto& f : fileMap.keys()) {
-                    // 获取扫描结果相关信息, md5、policy_id
-
-
-                    const QString& md5 = Utils::getFileMD5(f);
-                    TASK_SCAN_LOG_INFO << "Scann file: " << f;
-
-
-                    // 取xxx文件， 开始扫描
-                    // 获取要扫描的文件 并 开始扫描
-
-                    // 更新扫描状态
-                    fileScanFinished(f, md5, true, QList<QString>());
+                    scanFile(f);
                 }
             }
         }

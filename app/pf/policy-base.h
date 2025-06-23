@@ -235,6 +235,7 @@ public:
     ~PolicyGroup();
 
     void parseRule(const QJsonArray& rule);
+    QString getPolicyGroupName() const;
 
     void setDescription(const QString& desc);
     const QString& getDescription() const;
@@ -251,6 +252,8 @@ public:
 
     void setOrder(int order);
     int getOrder() const;
+
+    bool match (const QString& filePath, QList<QString>& ctx, QMap<QString, QString>& res);
 
 private:
     int                                         mOrder;

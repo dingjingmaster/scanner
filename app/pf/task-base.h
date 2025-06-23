@@ -98,10 +98,13 @@ public:
 private:
     void scanFiles();
     void taskFinished();
+    // QString getTaskTmpMd5(const QString& filePath) const;
     bool pop100File(QMap<QString, QString>& fileMap) const;
     QPair<QString, QString> getScanFileResult (const QString& filePath);
     void fileScanFinished(const QString& path, const QString& md5, bool isHit, const QList<QString>& ctx);
-    QString getTaskTmpMd5(const QString& filePath) const;
+
+    // 使用此任务中的扫描规则进行文件扫描
+    void scanFile(const QString& filePath);
 
 private:
     bool                                            mFinishedOneTime = false;

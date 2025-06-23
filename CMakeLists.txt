@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.15)
 project(andsec-scanner LANGUAGES C CXX)
 
 set(DEBUG ON)
@@ -13,6 +13,7 @@ set(PROJECT_VERSION_PATCH 0)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(JAVA_HOME "/opt/openjdk-bin-21")
 
 add_definitions(
         -w -g
@@ -21,7 +22,7 @@ add_definitions(
 
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
-        -D INSTALL_PATH=\\"/usr/local/andsec/\\"
+        -D INSTALL_PATH=\\"/usr/local/andsec\\"
 #        -D DATA_DIR=\\"/var/lib/andsec/scanner/\\"
         -D DATA_DIR=\\"/tmp\\"
         -D PACKAGE_VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\")
