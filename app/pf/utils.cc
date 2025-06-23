@@ -35,7 +35,10 @@ QString Utils::getFileMD5(const QString & filePath)
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly)) {
         QCryptographicHash hash(QCryptographicHash::Md5);
-        hash.addData(&file);
+        while (!file.atEnd()) {
+            QByteArray data = file.read(40960);
+            hash.addData(data);
+        }
         file.close();
         return hash.result().toHex();
     }

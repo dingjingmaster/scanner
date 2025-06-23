@@ -39,11 +39,16 @@ public:
     void updateTaskStatusStopped(const QString& taskId) const;
     void updateTaskStatusFinished(const QString& taskId) const;
 
+    // scan result
+    QPair<QString, QString> getScanResultPolicyIdAndMd5(const QString& filePath) const;
+
     // task table
     void createTaskTable(const QString& taskId) const;
+    QString getTaskFileMd5(const QString& taskId, const QString& filePath) const; // 获取已保存的md5, 根据结果中的策略id检查是否无须扫描
     bool get100FileByTaskId(const QString& taskId, QMap<QString, QString>& files) const;
     bool checkTaskTableFileExists(const QString& taskId, const QString& filePath) const;
-    void updateTaskTable(const QString& taskId, const QString& filePath, const QString& md5) const;
+    void insertTaskTable(const QString& taskId, const QString& filePath, const QString& md5) const;
+    void updateTaskTable(const QString& taskId, const QString& filePath, const QString& md5, bool isFinished) const;
 
 private:
     explicit DataBase(QObject *parent = nullptr);

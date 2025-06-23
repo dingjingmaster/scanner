@@ -124,12 +124,23 @@ void DataBase::createTaskTable(const QString & taskId) const
     }
 }
 
+QString DataBase::getTaskFileMd5(const QString& taskId, const QString& filePath) const
+{
+    sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5 FROM T%1 WHERE file_path = ?;").arg(taskId));
+    query.bind(0, filePath);
+    const auto iter = query.begin();
+    const auto md5S = (*iter).get<QString>(0);
+    query.finish();
+
+    return md5S;
+}
+
 bool DataBase::checkTaskTableFileExists(const QString & taskId, const QString & filePath) const
 {
     return mDB->checkKeyExist("T" + taskId, "file_path", filePath);
 }
 
-void DataBase::updateTaskTable(const QString & taskId, const QString & filePath, const QString& md5) const
+void DataBase::insertTaskTable(const QString & taskId, const QString & filePath, const QString& md5) const
 {
     if (checkTaskTableFileExists(taskId, filePath)) {
         if (!md5.isNull() && !md5.isEmpty() && "" != md5) {
@@ -166,6 +177,21 @@ void DataBase::updateTaskTable(const QString & taskId, const QString & filePath,
     }
     catch (std::exception& e) {
         qWarning() << __FUNCTION__ << __LINE__ << "Failed to update insert: " << e.what();
+    }
+}
+
+void DataBase::updateTaskTable(const QString& taskId, const QString& filePath, const QString& md5, bool isFinished) const
+{
+    const sqlite3_wrap::Sqlite3Command cmd(*mDB, QString("UPDATE T%1 SET file_md5 = ?, is_finished = ? WHERE file_path = ?;")
+                                        .arg(taskId).toUtf8().constData());
+    try {
+        cmd.bind(1, md5);
+        cmd.bind(2, isFinished ? 1 : 0);
+        cmd.bind(3, filePath);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to update task_table: " << e.what();
     }
 }
 
@@ -278,6 +304,22 @@ void DataBase::updateTaskStatusFinished(const QString & taskId) const
     catch (std::exception& e) {
         qWarning() << __FUNCTION__ << __LINE__ << "Failed to update scan_task: " << e.what();
     }
+}
+
+QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& filePath) const
+{
+    sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5, policy_id FROM scan_result WHERE file_path = ?;"));
+    query.bind(0, filePath);
+    const auto iter = query.begin();
+    if (iter != query.end()) {
+        const auto md5S = (*iter).get<QString>(0);
+        const auto policyId = (*iter).get<QString>(1);
+        query.finish();
+        return QPair<QString, QString>(md5S, policyId);
+    }
+    query.finish();
+
+    return QPair<QString, QString>("", "");
 }
 
 DataBase::DataBase(QObject* parent)

@@ -192,6 +192,7 @@ void ScanTask::scanFiles()
         }
         if (dir.startsWith("/bin/")
             || dir.startsWith("/boot/")
+            || dir.startsWith("/data/")         // FIXME:// DJ-测试时候
             || dir.startsWith("/dev/")
             || dir.startsWith("/efi/")
             || dir.startsWith("/etc/")
@@ -207,7 +208,7 @@ void ScanTask::scanFiles()
             || dir.startsWith("/usr/")
             || dir.startsWith("/tmp/")
             || dir.startsWith("/var/")) {
-            TASK_SCAN_LOG_INFO << "跳过特殊文件夹: " << path;
+            TASK_SCAN_LOG_INFO << "skip special directory: " << path;
             return false;
         }
         return true;
@@ -217,6 +218,7 @@ void ScanTask::scanFiles()
         if (path.startsWith("/bin/")
             || path.startsWith("/boot/")
             || path.startsWith("/dev/")
+            || path.startsWith("/data/")            // FIXME:// DJ-
             || path.startsWith("/efi/")
             || path.startsWith("/etc/")
             || path.startsWith("/lib/")
@@ -231,7 +233,7 @@ void ScanTask::scanFiles()
             || path.startsWith("/usr/")
             || path.startsWith("/tmp/")
             || path.startsWith("/var/")) {
-            TASK_SCAN_LOG_INFO << "跳过特殊文件: " << path;
+            TASK_SCAN_LOG_INFO << "skip special directory: " << path;
             return false;
         }
         // 检查是否是例外文件夹
@@ -250,11 +252,11 @@ void ScanTask::scanFiles()
         dirs << dir;
         for (int i = 0; i < dirs.size(); ++i) {
             QFileInfo fi(dirs.at(i));
-            if (!fi.exists()) { TASK_SCAN_LOG_INFO << "文件夹不存在: " << fi.absolutePath(); continue;}
-            if (!isInScanDir(fi.absolutePath())) { continue; }
+            if (!fi.exists()) { TASK_SCAN_LOG_INFO << "Not exists directory: " << fi.absolutePath(); continue;}
+            if (!isInScanDir(fi.absolutePath())) { TASK_SCAN_LOG_INFO << "Not absolute path"; continue; }
             if (fi.isDir() && !fi.isSymbolicLink()) {
                 QDir ddir(dirs.at(i));
-                // TASK_SCAN_LOG_INFO << "正在遍历文件夹: " << ddir.absolutePath();
+                TASK_SCAN_LOG_INFO << "scanning directory: " << ddir.absolutePath();
                 auto ds = ddir.entryList();
                 for (auto& j : ds) {
                     if ("." == j || ".." == j) { continue; }
@@ -275,7 +277,7 @@ void ScanTask::scanFiles()
 
     // 检查是否存在，存在则读取，否则扫描
     for (const auto& d : mTaskScanPath) {
-        // TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
+        TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
         if (isInScanDir(d)) {
             filesForScan += getDirFiles(d);
         }
@@ -287,7 +289,7 @@ void ScanTask::scanFiles()
     // 保存 所有 要扫描的文件
     DataBase::getInstance().createTaskTable(getTaskId());
     for (const auto& d : filesForScan) {
-        DataBase::getInstance().updateTaskTable(getTaskId(), Utils::formatPath(d), "");
+        DataBase::getInstance().insertTaskTable(getTaskId(), Utils::formatPath(d), "");
     }
     DataBase::getInstance().updateTotalFile(getTaskId(), filesForScan.size());
     TASK_SCAN_LOG_INFO << "All files: " << filesForScan.size();
@@ -308,6 +310,27 @@ bool ScanTask::pop100File(QMap<QString, QString> & fileMap) const
     fileMap.clear();
 
     return DataBase::getInstance().get100FileByTaskId(getTaskId(), fileMap);
+}
+
+QPair<QString, QString> ScanTask::getScanFileResult(const QString& filePath)
+{
+    // 扫描任务 -- 临时数据
+    const QString md5 = DataBase::getInstance().getTaskFileMd5(getTaskId(), filePath);
+
+    // 扫描结果 -- md5、policy_id
+}
+
+void ScanTask::fileScanFinished(const QString& path, const QString& md5, bool isHit, const QList<QString>& ctx)
+{
+    // 更新临时表状态
+    DataBase::getInstance().updateTaskTable(getTaskId(), path, md5, true);
+
+    // TODO:// 更新 结果表状态
+}
+
+QString ScanTask::getTaskTmpMd5(const QString& filePath) const
+{
+    return DataBase::getInstance().getTaskFileMd5(getTaskId(), filePath);
 }
 
 void ScanTask::stop()
@@ -351,10 +374,20 @@ void ScanTask::run()
                     continue;
                 }
 
+                TASK_SCAN_LOG_INFO << "start scann '" << fileMap.size() << "' files ...";
                 for (const auto& f : fileMap.keys()) {
+                    // 获取扫描结果相关信息, md5、policy_id
+
+
+                    const QString& md5 = Utils::getFileMD5(f);
                     TASK_SCAN_LOG_INFO << "Scann file: " << f;
+
+
                     // 取xxx文件， 开始扫描
                     // 获取要扫描的文件 并 开始扫描
+
+                    // 更新扫描状态
+                    fileScanFinished(f, md5, true, QList<QString>());
                 }
             }
         }

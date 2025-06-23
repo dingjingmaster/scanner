@@ -99,6 +99,9 @@ private:
     void scanFiles();
     void taskFinished();
     bool pop100File(QMap<QString, QString>& fileMap) const;
+    QPair<QString, QString> getScanFileResult (const QString& filePath);
+    void fileScanFinished(const QString& path, const QString& md5, bool isHit, const QList<QString>& ctx);
+    QString getTaskTmpMd5(const QString& filePath) const;
 
 private:
     bool                                            mFinishedOneTime = false;
