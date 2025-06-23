@@ -4,8 +4,10 @@
 
 #include "policy-base.h"
 
+#include <QFile>
 #include <QJsonDocument>
 #include <macros/macros.h>
+
 
 RuleBase::RuleBase(const QString& ruleId, RuleType type)
     : mRuleId(ruleId), mType(type)
@@ -41,7 +43,12 @@ void RuleBase::parseRule(const QJsonValue & rule)
     qWarning() << "RuleBase::parseRule, This is Not supported, Please check you code!";
 }
 
-bool RuleBase::matchRule(const QString & stringLine)
+bool RuleBase::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+{
+    return false;
+}
+
+bool RuleBase::exceptRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
 {
     return false;
 }
@@ -211,7 +218,7 @@ void FileTypeRule::parseRule(const QJsonValue & rule)
     }
 }
 
-bool FileTypeRule::matchRule(const QString & lineString)
+bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
 {
     return false;
 }
@@ -423,6 +430,11 @@ void RegexpRule::parseRule(const QJsonValue & rule)
     }
 }
 
+bool RegexpRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+{
+    return RuleBase::matchRule(filePath, metaPath, ctxPath, ctx, res);
+}
+
 void RegexpRule::setIgnoreCase(bool ignoreCase)
 {
     mIgnoreCase = ignoreCase;
@@ -515,6 +527,52 @@ int KeywordRule::getWightByKeyword(const QString & keyword) const
     }
 
     return 0;
+}
+
+bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+{
+    bool ret = false;
+
+    auto match = [=] () ->qint64 {
+
+    };
+
+    // 权重类型
+    switch (mMode) {
+        default:
+        case RecognitionClose: {
+            break;
+        }
+        case RecognitionScore: {
+            break;
+        }
+        case RecognitionTimes: {
+            break;
+        }
+    }
+
+    // 识别规则
+    // 忽略大小写
+    if (mIgnoreCase) {
+
+    }
+
+    // 支持混淆
+    if (mIgnoreConfuse) {
+
+    }
+
+    // 忽略中文简体、繁体
+    if (mIgnoreZhTw) {
+
+    }
+
+    return ret;
+}
+
+bool KeywordRule::exceptRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+{
+    return RuleBase::exceptRule(filePath, metaPath, ctxPath, ctx, res);
 }
 
 void KeywordRule::setIgnoreCase(bool ignoreCase)
@@ -722,6 +780,24 @@ RiskLevel PolicyGroup::getRiskLevel() const
     return mRiskLevel;
 }
 
+QString PolicyGroup::getRiskLevelString() const
+{
+    switch (mRiskLevel) {
+        default:
+        case RiskLevel::Low: {
+            return "Low";
+        }
+        case RiskLevel::Middle: {
+            return "Middle";
+        }
+        case RiskLevel::High: {
+            return "High";
+        }
+    }
+
+    return "Unknown";
+}
+
 void PolicyGroup::setRuleHitCount(int count)
 {
     mRuleHitCount = count;
@@ -752,8 +828,54 @@ int PolicyGroup::getOrder() const
     return mOrder;
 }
 
-bool PolicyGroup::match(const QString& filePath, QList<QString>& ctx, QMap<QString, QString>& res)
+bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
 {
+#define TASK_SCAN_LOG_INFO       qInfo() \
+    << "[TaskId: " << mId \
+    << " TaskName: " << mName \
+    << " RiskLevel: " << getRiskLevelString() \
+    << " RuleHitCount: " << mRuleHitCount \
+    << " RuleExceptCount: " << mRuleExceptCount \
+    << "] "
+#if 1
+    QFile fileM(metaPath);
+    if (fileM.open(QFile::ReadOnly)) {
+        qInfo() << "\nmeta:\n" << fileM.readAll();
+        fileM.close();
+    }
+
+    QFile file(ctxPath);
+    if (file.open(QFile::ReadOnly)) {
+        qInfo() << "\ncontent:\n" << file.readAll();
+        file.close();
+    }
+#endif
+
+    // 例外
+    quint64 expInt = 0;
+    quint64 matchInt = 0;
+    auto exceptRules = mExceptRules.values();
+    for (const auto& e : exceptRules) {
+        if (e->exceptRule(filePath, metaPath, ctxPath, ctx, res)) {
+            expInt++;
+        }
+    }
+
+    // 匹配
+    auto rules = mRules.values();
+    for (const auto& r : rules) {
+        if (r->matchRule(filePath, metaPath, ctxPath, ctx, res)) {
+            matchInt++;
+        }
+    }
+
+    // 匹配所有规则？还是匹配某几个规则？
+    // 例外所有规则？还是例外某几个规则？
+
+    TASK_SCAN_LOG_INFO << "Hit exception policy: " << expInt << " matched policy: " << matchInt;
+
+
+#undef TASK_SCAN_LOG_INFO
     return false;
 }
 

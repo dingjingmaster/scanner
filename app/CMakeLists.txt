@@ -13,6 +13,7 @@ add_executable(andsec-scanner main.cpp
 target_include_directories(andsec-scanner PUBLIC
         ${QT5_INCLUDE_DIRS}
         ${GIO_INCLUDE_DIRS}
+        ${OPENCC_INCLUDE_DIRS}
         ${SQLITE3_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/app
         ${JAVA_HOME}/include
@@ -21,6 +22,7 @@ target_include_directories(andsec-scanner PUBLIC
 target_link_libraries(andsec-scanner PUBLIC
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
+        ${OPENCC_LIBRARIES}
         ${SQLITE3_LIBRARIES}
         -L${JAVA_HOME}/lib/server -ljvm
         -Wl,-rpath=${JAVA_HOME}/lib/server

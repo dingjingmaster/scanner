@@ -46,7 +46,8 @@ public:
     const QString &getRuleId() const;
 
     virtual void parseRule(const QJsonValue& rule);
-    virtual bool matchRule(const QString& stringLine);
+    virtual bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res);
+    virtual bool exceptRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res);
 
 private:
     bool                                        mExactMatch;
@@ -77,7 +78,7 @@ public:
     ~FileTypeRule() override = default;
 
     void parseRule(const QJsonValue& rule) override;
-    bool matchRule(const QString& lineString) override;
+    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res) override;
 
 private:
     void setModifyTimes(const QString& start, const QString& end);
@@ -158,6 +159,7 @@ public:
     int getWightByRegex (const QString &regex) const;
 
     void parseRule(const QJsonValue& rule) override;
+    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res) override;
 
 private:
     void addCurrentMatchCount(qint64 c=1);
@@ -198,6 +200,9 @@ public:
     RecognitionMode getRecognitionMode() const;
     void parseRule(const QJsonValue & rule) override;
     int getWightByKeyword(const QString &keyword) const;
+
+    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res) override;
+    bool exceptRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res) override;
 
 private:
     void setWildcard(bool c);
@@ -243,6 +248,7 @@ public:
     void setRiskLevel(RiskLevel level);
     void setRiskLevel(int level);
     RiskLevel getRiskLevel() const;
+    QString getRiskLevelString() const;
 
     void setRuleHitCount(int count);
     int getRuleHitCount() const;
@@ -253,7 +259,7 @@ public:
     void setOrder(int order);
     int getOrder() const;
 
-    bool match (const QString& filePath, QList<QString>& ctx, QMap<QString, QString>& res);
+    bool match (const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res);
 
 private:
     int                                         mOrder;

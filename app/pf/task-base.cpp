@@ -348,14 +348,14 @@ void ScanTask::scanFile(const QString& filePath)
 
     // 提取文件内容
     const QTemporaryDir tmpDir;
-    QString tmpDirPath = tmpDir.path();
+    const QString tmpDirPath = tmpDir.path();
     if (!JavaEnv::getInstance()->parseFile(filePath, tmpDirPath)) {
         TASK_SCAN_LOG_INFO << "Failed to parse file: " << filePath;
         return;
     }
 
-    QStringList files;
-    files << QString("%1/ctx.txt").arg(tmpDirPath);
+    const QString& meta = QString("%1/meta.txt").arg(tmpDirPath);
+    const QString& ct = QString("%1/ctx.txt").arg(tmpDirPath);
 
     // 获取扫描结果相关信息, md5、policy_id
     const QString realMd5 = Utils::getFileMD5(filePath);
@@ -369,13 +369,11 @@ void ScanTask::scanFile(const QString& filePath)
             continue;
         }
         const auto p = mPoliciesIdx[i];
-        for (auto& f : files) {
-            if (!p->match(f, ctx, res)) {
-                TASK_SCAN_LOG_INFO << "File " << f << " does not match idx: " << p->getPolicyGroupName();
-                continue;
-            }
-            hasMatched = true;
+        if (!p->match(filePath, meta, ct, ctx, res)) {
+            TASK_SCAN_LOG_INFO << "File " << filePath << " does not match idx: " << p->getPolicyGroupName();
+            continue;
         }
+        hasMatched = true;
     }
 
     const QString& md5 = Utils::getFileMD5(filePath);

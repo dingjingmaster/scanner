@@ -31,6 +31,7 @@ find_package (PkgConfig)
 find_package(Qt5 COMPONENTS Core Network REQUIRED)
 
 pkg_check_modules(GIO REQUIRED gio-2.0)
+pkg_check_modules(OPENCC REQUIRED opencc)
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
 pkg_check_modules(QT5 REQUIRED Qt5Core Qt5Network)
 

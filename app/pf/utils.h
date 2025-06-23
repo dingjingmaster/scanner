@@ -13,6 +13,7 @@ class Utils
 public:
     static QString formatPath(const QString& path);
     static QString getFileMD5(const QString& path);
+
 private:
     Utils(){}
     Utils(const Utils&) {};
