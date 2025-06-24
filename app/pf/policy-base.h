@@ -235,6 +235,13 @@ private:
 class PolicyGroup
 {
 public:
+    typedef enum {
+        PG_MATCH_ERR,       // 出错
+        PG_MATCH_EXCEPT,    // 命中例外
+        PG_MATCH_OK,        // 命中策略
+        PG_MATCH_NO,        // 没有命中
+    } MatchResult;
+public:
     PolicyGroup(const QString& id, const QString& name);
     ~PolicyGroup();
 
@@ -249,27 +256,27 @@ public:
     RiskLevel getRiskLevel() const;
     QString getRiskLevelString() const;
 
-    void setRuleHitCount(quint64 count);
-    quint64 getRuleHitCount() const;
+    void setRuleHitCount(qint64 count);
+    qint64 getRuleHitCount() const;
 
-    void setRuleExceptCount(quint64 count);
-    quint64 getRuleExceptCount() const;
+    void setRuleExceptCount(qint64 count);
+    qint64 getRuleExceptCount() const;
 
     void setOrder(int order);
     int getOrder() const;
 
-    bool match (const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res);
+    MatchResult match (const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res);
 
 private:
     int                                         mOrder;
     QString                                     mId;
-    QString                                     mName;              // 策略名称
-    QString                                     mDescription;       // 策略描述
-    RiskLevel                                   mRiskLevel;         // 风险等级
-    quint64                                     mRuleHitCount;      // 策略命中个数
-    quint64                                     mRuleExceptCount;   // 例外策略个数
+    QString                                     mName;                  // 策略名称
+    QString                                     mDescription;           // 策略描述
+    RiskLevel                                   mRiskLevel;             // 风险等级
+    qint64                                      mRuleHitCount;          // 组内需要命中策略数，-1表示全部命中，策略命中个数
+    qint64                                      mRuleExceptCount;       // 组内例外命中策略数，-1表示需要全部命中
     QMap<QString, std::shared_ptr<RuleBase>>    mExceptRules;
-    QMap<QString, std::shared_ptr<RuleBase>>    mRules;             // 规则
+    QMap<QString, std::shared_ptr<RuleBase>>    mRules;                 // 规则
 };
 
 

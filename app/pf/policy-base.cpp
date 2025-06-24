@@ -802,22 +802,22 @@ QString PolicyGroup::getRiskLevelString() const
     return "Unknown";
 }
 
-void PolicyGroup::setRuleHitCount(quint64 count)
+void PolicyGroup::setRuleHitCount(qint64 count)
 {
     mRuleHitCount = count;
 }
 
-quint64 PolicyGroup::getRuleHitCount() const
+qint64 PolicyGroup::getRuleHitCount() const
 {
     return mRuleHitCount;
 }
 
-void PolicyGroup::setRuleExceptCount(quint64 count)
+void PolicyGroup::setRuleExceptCount(qint64 count)
 {
     mRuleExceptCount = count;
 }
 
-quint64 PolicyGroup::getRuleExceptCount() const
+qint64 PolicyGroup::getRuleExceptCount() const
 {
     return mRuleExceptCount;
 }
@@ -832,8 +832,10 @@ int PolicyGroup::getOrder() const
     return mOrder;
 }
 
-bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
+PolicyGroup::MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
 {
+    MatchResult matchRes = PG_MATCH_ERR;
+
 #define TASK_SCAN_LOG_INFO       qInfo() \
     << "[TaskId: " << mId \
     << " TaskName: " << mName \
@@ -858,13 +860,17 @@ bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const 
     // 例外
     quint64 expInt = 0;
     quint64 matchInt = 0;
+    const qint64 minExceptCount = getRuleExceptCount();
+    const qint64 minMatchCount = getRuleHitCount();
     auto exceptRules = mExceptRules.values();
     for (const auto& e : exceptRules) {
         if (e->matchRule(filePath, metaPath, ctxPath, ctx, res)) {
             expInt++;
         }
+        if (minExceptCount >= 0 && expInt >= minExceptCount) {
+
+        }
     }
-    setRuleExceptCount(expInt);
 
 
 
@@ -878,7 +884,6 @@ bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const 
             matchInt++;
         }
     }
-    setRuleHitCount(matchInt);
 
     // 匹配所有规则？还是匹配某几个规则？
     // 例外所有规则？还是例外某几个规则？
@@ -886,6 +891,6 @@ bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const 
     TASK_SCAN_LOG_INFO << "Hit exception policy: " << expInt << " matched policy: " << matchInt;
 
 #undef TASK_SCAN_LOG_INFO
-    return false;
+    return matchRes;
 }
 

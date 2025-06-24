@@ -5,6 +5,7 @@ add_executable(andsec-scanner main.cpp
         pf/policy-base.cpp pf/policy-base.h
         pf/task-manager.cpp pf/task-manager.h
         pf/policy-filter.cc pf/policy-filter.h
+        pf/general-setting.cc pf/general-setting.h
 
         tika-wrap/src/java-env.cpp tika-wrap/src/java-env.h
 

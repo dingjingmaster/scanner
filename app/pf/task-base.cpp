@@ -363,12 +363,28 @@ void ScanTask::scanFile(const QString& filePath)
     bool hasMatched = false;
     QList<QString> ctx;
     QMap<QString, QString> res;
+
+    // 优先级，扫描按优先级扫描
+
+    // 上下文
+    // 前边20 后边20
+
+
+    // 重用结果 ...
+    // 文件 + md5 一样，则获取所有规则ID
+    //      检测规则Id
+
+
+    // 先检查例外：
+    //   1. 如果例外命中，保存策略Id，保存上下文
+    //   2. 如果策略命中，保存策略Id，保存上下文
     for (auto i : mPoliciesOrderIdx) {
         if (!mPoliciesIdx.contains(i)) {
             TASK_SCAN_LOG_WARN << "Not found policy id: " << i;
             continue;
         }
         const auto p = mPoliciesIdx[i];
+
         if (!p->match(filePath, meta, ct, ctx, res)) {
             TASK_SCAN_LOG_INFO << "File " << filePath << " does not match idx: " << p->getPolicyGroupName();
             continue;
