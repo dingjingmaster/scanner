@@ -5,6 +5,7 @@
 #include "utils.h"
 
 #include <QFile>
+#include <opencc.h>
 #include <QCryptographicHash>
 
 #include "../macros/macros.h"
@@ -44,4 +45,11 @@ QString Utils::getFileMD5(const QString & filePath)
     }
 
     return "";
+}
+
+QString Utils::simpleToTradition(const QString& str)
+{
+    const opencc::SimpleConverter cov("s2t.json");
+
+    return cov.Convert(str.toUtf8().toStdString()).data();
 }

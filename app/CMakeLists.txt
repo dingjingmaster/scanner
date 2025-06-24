@@ -8,9 +8,12 @@ add_executable(andsec-scanner main.cpp
 
         tika-wrap/src/java-env.cpp tika-wrap/src/java-env.h
 
+        hs-wrap/src/regex-matcher.cpp hs-wrap/src/regex-matcher.h
+
         sqlite3-wrap/src/sqlite3-wrap.cc sqlite3-wrap/src/sqlite3-wrap.h
 )
 target_include_directories(andsec-scanner PUBLIC
+        ${HS_INCLUDE_DIRS}
         ${QT5_INCLUDE_DIRS}
         ${GIO_INCLUDE_DIRS}
         ${OPENCC_INCLUDE_DIRS}
@@ -18,8 +21,10 @@ target_include_directories(andsec-scanner PUBLIC
         ${CMAKE_SOURCE_DIR}/app
         ${JAVA_HOME}/include
         ${JAVA_HOME}/include/linux
+        ${CMAKE_SOURCE_DIR}/app/hs-wrap/src
 )
 target_link_libraries(andsec-scanner PUBLIC
+        ${HS_LIBRARIES}
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}

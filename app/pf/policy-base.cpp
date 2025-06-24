@@ -8,6 +8,8 @@
 #include <QJsonDocument>
 #include <macros/macros.h>
 
+#include "regex-matcher.h"
+
 
 RuleBase::RuleBase(const QString& ruleId, RuleType type)
     : mRuleId(ruleId), mType(type)
@@ -43,12 +45,7 @@ void RuleBase::parseRule(const QJsonValue & rule)
     qWarning() << "RuleBase::parseRule, This is Not supported, Please check you code!";
 }
 
-bool RuleBase::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
-{
-    return false;
-}
-
-bool RuleBase::exceptRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+bool RuleBase::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
 {
     return false;
 }
@@ -218,7 +215,7 @@ void FileTypeRule::parseRule(const QJsonValue & rule)
     }
 }
 
-bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
 {
     return false;
 }
@@ -430,7 +427,7 @@ void RegexpRule::parseRule(const QJsonValue & rule)
     }
 }
 
-bool RegexpRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+bool RegexpRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
 {
     return RuleBase::matchRule(filePath, metaPath, ctxPath, ctx, res);
 }
@@ -529,50 +526,56 @@ int KeywordRule::getWightByKeyword(const QString & keyword) const
     return 0;
 }
 
-bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
+bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
 {
+#define TASK_SCAN_LOG_INFO       qInfo() \
+    << "[KeywordRule]" \
+    << "[ignore case: " << mIgnoreCase \
+    << " zhTw: " << mIgnoreZhTw \
+    << " ignore confuse: " << mIgnoreConfuse \
+    << " wildcard: " << mWildcard \
+    << " mincount: " << mCount \
+    << "] "
+
     bool ret = false;
+    C_RETURN_VAL_IF_FAIL(QFile::exists(filePath) && QFile::exists(metaPath) && QFile::exists(ctxPath), ret);
 
-    auto match = [=] () ->qint64 {
+    QFile file(filePath);
+    C_RETURN_VAL_IF_FAIL(file.open(QIODevice::ReadOnly | QIODevice::Text), false);
 
-    };
+
+    // TODO:// 支持混淆
+    QStringList ls;
+    for (auto& l : mKeywordAndWeight.keys()) {
+        ls << l.replace("|", "\\|");
+    }
+
+    const QString regStr = QString("(%1)").arg(ls.join("|"));
+    RegexMatcher rm (regStr, !mIgnoreZhTw, !mIgnoreCase);
+    rm.match(file, ctx, 20);
+    file.close();
 
     // 权重类型
-    switch (mMode) {
-        default:
-        case RecognitionClose: {
-            break;
+    if (RecognitionScore == mMode) {
+
+    }
+    else if (RecognitionTimes == mMode) {
+
+    }
+    else {
+        const auto c = rm.getMatchedCount();
+        if (c < mCount) {
+            ctx.clear();
+            res.clear();
+            TASK_SCAN_LOG_INFO << "matched count: " << c << " Less then mini count: " << mCount;
+            return ret;
         }
-        case RecognitionScore: {
-            break;
-        }
-        case RecognitionTimes: {
-            break;
-        }
+        res["matchedCount"] = QString("%1").arg(c);
     }
 
-    // 识别规则
-    // 忽略大小写
-    if (mIgnoreCase) {
-
-    }
-
-    // 支持混淆
-    if (mIgnoreConfuse) {
-
-    }
-
-    // 忽略中文简体、繁体
-    if (mIgnoreZhTw) {
-
-    }
+#undef TASK_SCAN_LOG_INFO
 
     return ret;
-}
-
-bool KeywordRule::exceptRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res)
-{
-    return RuleBase::exceptRule(filePath, metaPath, ctxPath, ctx, res);
 }
 
 void KeywordRule::setIgnoreCase(bool ignoreCase)
@@ -669,7 +672,8 @@ void KeywordRule::parseRule(const QJsonValue & rule)
     setIgnoreZhTw(ignoreZhTw);
     setRecognitionMode(wightFlag);
 
-    if (getRecognitionMode() == RuleBase::RecognitionTimes) {
+    if (getRecognitionMode() == RuleBase::RecognitionTimes
+        || getRecognitionMode() == RuleBase::RecognitionClose) {
         setMinMatchCount(minMatchItems);
     }
     else if (getRecognitionMode() == RuleBase::RecognitionScore) {
@@ -798,22 +802,22 @@ QString PolicyGroup::getRiskLevelString() const
     return "Unknown";
 }
 
-void PolicyGroup::setRuleHitCount(int count)
+void PolicyGroup::setRuleHitCount(quint64 count)
 {
     mRuleHitCount = count;
 }
 
-int PolicyGroup::getRuleHitCount() const
+quint64 PolicyGroup::getRuleHitCount() const
 {
     return mRuleHitCount;
 }
 
-void PolicyGroup::setRuleExceptCount(int count)
+void PolicyGroup::setRuleExceptCount(quint64 count)
 {
     mRuleExceptCount = count;
 }
 
-int PolicyGroup::getRuleExceptCount() const
+quint64 PolicyGroup::getRuleExceptCount() const
 {
     return mRuleExceptCount;
 }
@@ -837,7 +841,7 @@ bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const 
     << " RuleHitCount: " << mRuleHitCount \
     << " RuleExceptCount: " << mRuleExceptCount \
     << "] "
-#if 1
+#if 0
     QFile fileM(metaPath);
     if (fileM.open(QFile::ReadOnly)) {
         qInfo() << "\nmeta:\n" << fileM.readAll();
@@ -856,10 +860,16 @@ bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const 
     quint64 matchInt = 0;
     auto exceptRules = mExceptRules.values();
     for (const auto& e : exceptRules) {
-        if (e->exceptRule(filePath, metaPath, ctxPath, ctx, res)) {
+        if (e->matchRule(filePath, metaPath, ctxPath, ctx, res)) {
             expInt++;
         }
     }
+    setRuleExceptCount(expInt);
+
+
+
+    // 如果是全量匹配，
+    if (expInt >= mRuleExceptCount) {}
 
     // 匹配
     auto rules = mRules.values();
@@ -868,12 +878,12 @@ bool PolicyGroup::match(const QString& filePath, const QString& metaPath, const 
             matchInt++;
         }
     }
+    setRuleHitCount(matchInt);
 
     // 匹配所有规则？还是匹配某几个规则？
     // 例外所有规则？还是例外某几个规则？
 
     TASK_SCAN_LOG_INFO << "Hit exception policy: " << expInt << " matched policy: " << matchInt;
-
 
 #undef TASK_SCAN_LOG_INFO
     return false;

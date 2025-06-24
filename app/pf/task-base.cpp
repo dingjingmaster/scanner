@@ -382,11 +382,6 @@ void ScanTask::scanFile(const QString& filePath)
     fileScanFinished(filePath, md5, hasMatched, QList<QString>());
 }
 
-// QString ScanTask::getTaskTmpMd5(const QString& filePath) const
-// {
-    // return DataBase::getInstance().getTaskFileMd5(getTaskId(), filePath);
-// }
-
 void ScanTask::stop()
 {
     mTaskStatus = ScanTaskStatus::Stop;

@@ -15,6 +15,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(JAVA_HOME "/opt/openjdk-bin-21")
 
+set(ENV{PKG_CONFIG_PATH} "/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig:${ENV_CONFIG_PATH}")
+
 add_definitions(
         -w -g
         -D QT_NO_KEYWORDS
@@ -30,6 +32,7 @@ add_definitions(
 find_package (PkgConfig)
 find_package(Qt5 COMPONENTS Core Network REQUIRED)
 
+pkg_check_modules(HS REQUIRED libhs)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(OPENCC REQUIRED opencc)
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
