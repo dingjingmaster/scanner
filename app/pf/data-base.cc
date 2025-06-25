@@ -46,7 +46,7 @@
     ");"
 
 #define POLICY_ID \
-    "CREATE policy_id (" \
+    "CREATE TABLE policy_id (" \
     "   `policy_id`                     VARCHAR                         NOT NULL," \
     "   `is_checked`                    TINYINT         DEFAULT 1       NOT NULL," \
     "   `dirty`                         TINYINT         DEFAULT 0       NOT NULL," \

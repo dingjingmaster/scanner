@@ -9,6 +9,7 @@
 #include <macros/macros.h>
 
 #include "regex-matcher.h"
+#include "utils.h"
 
 
 RuleBase::RuleBase(const QString& ruleId, RuleType type)
@@ -48,6 +49,25 @@ void RuleBase::parseRule(const QJsonValue & rule)
 bool RuleBase::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
     return false;
+}
+
+QString RuleBase::getTaskTypeString() const
+{
+    switch (mType) {
+        case RuleType::GeneralFileAttribute: {
+            return "FileAttribute";
+        }
+        case RuleType::GeneralFileFingerprint: {
+            return "FileFingerprint";
+        }
+        case RuleType::GeneralKeyword: {
+            return "Keyword";
+        }
+        case RuleType::GeneralRegular: {
+            return "Regular";
+        }
+    }
+    return "Unknown";
 }
 
 IdmRule::IdmRule(const QString & id)
@@ -407,6 +427,13 @@ void RegexpRule::parseRule(const QJsonValue & rule)
     const int minMatchItemsScore = ruleParam["minMatchItemsScore"].toInt();
     const bool exactMatch = ruleParam["exactMatch"].toBool(); // true 匹配到后、显示时候把前后非数字去掉，否则不去掉
 
+#if 0
+    qInfo() << "exactMatch          : " << exactMatch;
+    qInfo() << "miniMatchItems      : " << minMatchItems;
+    qInfo() << "miniMatchItemsScore : " << minMatchItemsScore;
+    exit(0);
+#endif
+
     setExactMatch(exactMatch);
     setWildcard(wildcard);
     setIgnoreCase(ignoreCase);
@@ -534,7 +561,7 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
     << " zhTw: " << mIgnoreZhTw \
     << " ignore confuse: " << mIgnoreConfuse \
     << " wildcard: " << mWildcard \
-    << " mincount: " << mCount \
+    << " mincount: " << getMinMatchCount() \
     << "] "
 
     bool ret = false;
@@ -565,14 +592,26 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
 
     QStringList ls;
     for (auto& l : mKeywordAndWeight.keys()) {
-        QString reg = l;
-        if (mIgnoreConfuse) {
-            auto arr = l.split("");
-            arr.removeAll("");
-            reg = arr.join(".{0,15}");
-            reg = reg.replace("|", "\\|");
+        QStringList regs;
+        regs << l;
+
+        if (mIgnoreZhTw) {
+            QString regTr = Utils::simpleToTradition(l);
+            if (l != regTr) {
+                regs << regTr;
+            }
         }
-        ls << regSpecialChar(reg);
+
+        for (auto& ll : regs) {
+            QString reg = ll;
+            if (mIgnoreConfuse) {
+                auto arr = ll.split("");
+                arr.removeAll("");
+                reg = arr.join(".{0,15}");
+                reg = reg.replace("|", "\\|");
+            }
+            ls << regSpecialChar(reg);
+        }
     }
     TASK_SCAN_LOG_INFO << "keywords: " << mKeywordAndWeight.keys();
     TASK_SCAN_LOG_INFO << "keywords regs 1: " << ls;
@@ -580,8 +619,8 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
     QList<QString> ctx;
     const QString regStr = QString("(%1)").arg(ls.join("|"));
     TASK_SCAN_LOG_INFO << "keywords regs 2: " << regStr;
-    RegexMatcher rm (regStr, !mIgnoreZhTw, !mIgnoreCase);
-    rm.match(file, ctx, 20);
+    RegexMatcher rm (regStr, !mIgnoreCase);
+    rm.match(file);
     file.close();
 
     // 权重类型
@@ -593,9 +632,9 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
     }
     else {
         const auto c = rm.getMatchedCount();
-        if (c < mCount) {
-            TASK_SCAN_LOG_INFO << "matched count: " << c << " Less then mini count: " << mCount;
-            return ret;
+        if (c >= getMinMatchCount()) {
+            TASK_SCAN_LOG_INFO << "matched count: " << c << " greater then mini count: " << getMinMatchCount();
+            ret = true;
         }
     }
 
@@ -686,7 +725,7 @@ void KeywordRule::parseRule(const QJsonValue & rule)
     const bool ignoreConfuse = ruleParam["ignoreConfuse"].toBool();
     const bool wildcard = ruleParam["wildcard"].toBool();
     const bool ignoreZhTw = ruleParam["ignoreZhTw"].toBool();
-    const int wightFlag = ruleParam["wightFlag"].toInt();
+    const int weightFlag = ruleParam["weightFlag"].toInt();
     const int minMatchItems = ruleParam["minMatchItems"].toInt();
     const int minMatchItemsScore = ruleParam["minMatchItemsScore"].toInt();
     const bool exactMatch = ruleParam["exactMatch"].toBool(); // true 匹配到后、显示时候把前后非数字去掉，否则不去掉
@@ -696,11 +735,13 @@ void KeywordRule::parseRule(const QJsonValue & rule)
     setIgnoreCase(ignoreCase);
     setIgnoreConfuse(ignoreConfuse);
     setIgnoreZhTw(ignoreZhTw);
-    setRecognitionMode(wightFlag);
+    setRecognitionMode(weightFlag);
 
+    qInfo() << "1";
     if (getRecognitionMode() == RuleBase::RecognitionTimes
         || getRecognitionMode() == RuleBase::RecognitionClose) {
         setMinMatchCount(minMatchItems);
+        qInfo() << "setMinMatchCount: " << getMinMatchCount();
     }
     else if (getRecognitionMode() == RuleBase::RecognitionScore) {
         setMinMatchCount(minMatchItemsScore);
@@ -711,6 +752,19 @@ void KeywordRule::parseRule(const QJsonValue & rule)
         const auto weight = k.toObject()["weight"].toInt(0);
         setKeywordAndWeight(kkk, weight);
     }
+
+#if 1
+    qInfo() << "\nKeyWord:\n" \
+            << "ignoreCase          : " << ignoreCase << "\n" \
+            << "ignoreConfuse       : " << ignoreConfuse << "\n" \
+            << "wildcard            : " << wildcard << "\n" \
+            << "ignoreZhTW          : " << ignoreZhTw << "\n" \
+            << "weightFlag          : " << weightFlag << "\n" \
+            << "exactMatch          : " << exactMatch << "\n" \
+            << "miniMatchItems      : " << minMatchItems << "\n" \
+            << "miniMatchItemsScore : " << minMatchItemsScore << "\n" \
+            << "getMinMatchCount    : " << getMinMatchCount();
+#endif
 }
 
 PolicyGroup::PolicyGroup(const QString & id, const QString & name)
@@ -738,18 +792,22 @@ void PolicyGroup::parseRule(const QJsonArray& rule)
             if ("regex" == ruleType.toLower()) {
                 rT = std::make_shared<RegexpRule>(ruleId);
                 rT->parseRule(r);
+                qInfo() << "Parse regex!";
             }
             else if ("keyword" == ruleType.toLower()) {
                 rT = std::make_shared<KeywordRule>(ruleId);
                 rT->parseRule(r);
+                qInfo() << "Parse keyword!";
             }
             else if ("filetype" == ruleType.toLower()) {
                 rT = std::make_shared<FileTypeRule>(ruleId);
                 rT->parseRule(r);
+                qInfo() << "Parse filetype!";
             }
             else if ("idm" == ruleType.toLower()) {
                 rT = std::make_shared<IdmRule>(ruleId);
                 rT->parseRule(r);
+                qInfo() << "Parse idm!";
             }
             else {
                 qWarning() << "Rule type " << ruleType << " does not exist";
@@ -883,34 +941,59 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
     }
 #endif
 
-    // 例外命中数量
-    // 规则命中数量
+    auto runRule = [=] (const std::shared_ptr<RuleBase>& rb, const QString& filePath, const QString& metaPath, const QString& ctxPath) -> bool {
+        bool ret = false;
+        switch (rb->getRuleType()) {
+            case RuleType::GeneralFileAttribute: {
+                break;
+            }
+            case RuleType::GeneralFileFingerprint: {
+                break;
+            }
+            case RuleType::GeneralKeyword: {
+                ret = dynamic_cast<KeywordRule*>(rb.get())->matchRule(filePath, metaPath, ctxPath);
+                break;
+            }
+            case RuleType::GeneralRegular: {
+                break;
+            }
+        }
+        return ret;
+    };
 
     // 例外
-    quint64 expInt = 0;
-    quint64 matchInt = 0;
-    const qint64 minExceptCount = getRuleExceptCount();
-    const qint64 minMatchCount = getRuleHitCount();
-    auto exceptRules = mExceptRules.values();
-    for (const auto& e : exceptRules) {
-        if (e->matchRule(filePath, metaPath, ctxPath)) {
-            expInt++;
+    quint64 expInt = 0;         // 例外命中数量
+    quint64 matchInt = 0;       // 规则命中数量
+    const qint64 exceptCount = mExceptRules.count();
+    if (exceptCount > 0) {
+        const qint64 minExceptCount = getRuleExceptCount();
+        for (auto kv = mExceptRules.keyValueBegin(); kv != mExceptRules.keyValueEnd(); ++kv) {
+            if (runRule(kv->second, filePath, metaPath, ctxPath)) {
+                TASK_SCAN_LOG_INFO << "命中例外策略组ID: " << kv->first << " file: " << filePath;
+                expInt++;
+            }
+
+            // 如果配置非全量匹配
+            if (minExceptCount >= 0 && expInt >= minExceptCount) {
+                TASK_SCAN_LOG_INFO << "命中例外策略, file: " << filePath;
+                return MatchResult::PG_MATCH_EXCEPT;
+            }
         }
 
-        if (minExceptCount >= 0 && expInt >= minExceptCount) {
-
+        // 如果配置全量匹配
+        if (minExceptCount < 0 && expInt >= exceptCount) {
+            TASK_SCAN_LOG_INFO << "命中例外策略, file: " << filePath << " expInt: " << expInt << " except rule count: " << exceptCount;
+            return MatchResult::PG_MATCH_EXCEPT;
         }
     }
 
-
-
-    // 如果是全量匹配，
-    if (expInt >= mRuleExceptCount) {}
+    return MatchResult::PG_MATCH_NO;
 
     // 匹配
+    const qint64 minMatchCount = getRuleHitCount();
     auto rules = mRules.values();
     for (const auto& r : rules) {
-        if (r->matchRule(filePath, metaPath, ctxPath)) {
+        if (runRule(r, filePath, metaPath, ctxPath)) {
             matchInt++;
         }
     }
@@ -921,6 +1004,7 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
     TASK_SCAN_LOG_INFO << "Hit exception policy: " << expInt << " matched policy: " << matchInt;
 
 #undef TASK_SCAN_LOG_INFO
+
     return matchRes;
 }
 

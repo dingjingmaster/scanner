@@ -22,7 +22,7 @@
 #include "utils.h"
 #include "tika-wrap/src/java-env.h"
 
-#define TASK_SCAN_LOG_INFO       qInfo() << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
+#define TASK_SCAN_LOG_INFO       qInfo()    << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
 #define TASK_SCAN_LOG_WARN       qWarning() << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
 
 
@@ -397,16 +397,16 @@ void ScanTask::scanFile(const QString& filePath)
 
         matchResult = p->match(filePath, meta, ctx);
         if (matchResult == MatchResult::PG_MATCH_OK) {
-            TASK_SCAN_LOG_INFO << "id: " << i << " Matched(规则匹配)!";
+            TASK_SCAN_LOG_INFO << "file: " << filePath << " Matched(规则匹配)!";
         }
         else if (matchResult == MatchResult::PG_MATCH_ERR) {
-            TASK_SCAN_LOG_INFO << "id: " << i << " err(出错)!";
+            TASK_SCAN_LOG_INFO << "file: " << filePath << " err(出错)!";
         }
         else if (matchResult == MatchResult::PG_MATCH_NO) {
-            TASK_SCAN_LOG_INFO << "id: " << i << " No(规则/例外规则未命中)!";
+            TASK_SCAN_LOG_INFO << "file: " << filePath << " No(规则/例外规则未命中)!";
         }
         else if (matchResult == MatchResult::PG_MATCH_EXCEPT) {
-            TASK_SCAN_LOG_INFO << "id: " << i << " Except(例外命中)!";
+            TASK_SCAN_LOG_INFO << "file: " << filePath << " Except(例外命中)!";
         }
         else {
             TASK_SCAN_LOG_WARN << "NOT SUPPORTED RESULT!";

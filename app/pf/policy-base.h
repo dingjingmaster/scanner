@@ -56,6 +56,8 @@ public:
     virtual void parseRule(const QJsonValue& rule);
     virtual bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath);
 
+    QString getTaskTypeString() const;
+
 private:
     bool                                        mExactMatch;
     QString                                     mRuleId;        // rule id
