@@ -344,14 +344,14 @@ QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& fil
     return QPair<QString, QString>("", "");
 }
 
-bool DataBase::checkTempTaskFileExist(const QString& taskId)
+bool DataBase::checkTempTaskFileExist(const QString& taskId) const
 {
     const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
 
     return QFile::exists(path);
 }
 
-void DataBase::saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files)
+void DataBase::saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files) const
 {
     const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
     QFile file(path);
@@ -366,7 +366,7 @@ void DataBase::saveTempTaskFileFirst(const QString& taskId, const QSet<QString>&
     file.close();
 }
 
-void DataBase::loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned)
+void DataBase::loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned) const
 {
     const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
     QFile file(path);
@@ -392,7 +392,7 @@ void DataBase::loadTempTaskFile(const QString& taskId, QSet<QString>& filesForSc
     file.close();
 }
 
-void DataBase::updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned)
+void DataBase::updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned) const
 {
     const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
     const QString pathTmp = QString("%1%2.tmp").arg(TASK_TMP_SCAN_FILE).arg(taskId);

@@ -99,7 +99,8 @@ private:
     void scanFiles();
     void taskFinished();
     // QString getTaskTmpMd5(const QString& filePath) const;
-    bool pop100File(QMap<QString, QString>& fileMap) const;
+    void pop100File(QStringList& fileMap) const;
+    void update100FileStatus(QStringList& fileMap);
     QPair<QString, QString> getScanFileResult (const QString& filePath);
     void fileScanFinished(const QString& path, const QString& md5, bool isHit, const QList<QString>& ctx);
 

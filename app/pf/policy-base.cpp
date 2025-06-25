@@ -552,7 +552,7 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
 
     const QString regStr = QString("(%1)").arg(ls.join("|"));
     RegexMatcher rm (regStr, !mIgnoreZhTw, !mIgnoreCase);
-    // rm.match(file, ctx, 20);
+    rm.match(file, ctx, 20);
     file.close();
 
     // 权重类型
@@ -829,9 +829,9 @@ int PolicyGroup::getOrder() const
     return mOrder;
 }
 
-PolicyGroup::MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath)
+MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
-    MatchResult matchRes = PG_MATCH_NO;
+    MatchResult matchRes = MatchResult::PG_MATCH_NO;
 
 #define TASK_SCAN_LOG_INFO       qInfo() \
     << "[TaskId: " << mId \

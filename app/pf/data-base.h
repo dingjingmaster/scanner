@@ -44,10 +44,10 @@ public:
     QPair<QString, QString> getScanResultPolicyIdAndMd5(const QString& filePath) const;
 
     // 扫描任务临时文件
-    bool checkTempTaskFileExist(const QString& taskId);
-    void saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files);
-    void loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned);
-    void updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned);
+    bool checkTempTaskFileExist(const QString& taskId) const;
+    void saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files) const;
+    void loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned) const;
+    void updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned) const;
     // bool get100FileByTaskId(const QString& taskId, QMap<QString, QString>& files) const;
 
     // task table

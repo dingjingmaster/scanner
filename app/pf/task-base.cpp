@@ -305,20 +305,26 @@ void ScanTask::taskFinished()
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
 }
 
-bool ScanTask::pop100File(QMap<QString, QString> & fileMap) const
+void ScanTask::pop100File(QStringList & fileMap) const
 {
     fileMap.clear();
 
-    if (mFilesForScan.isEmpty()) {
-        return false;
-    }
+    C_RETURN_IF_OK(mFilesForScan.isEmpty());
 
     for (auto& f : mFilesForScan) {
-        fileMap[f] = "";
+        fileMap << f;
         C_BREAK_IF_OK(fileMap.count() >= 100);
     }
+}
 
-    return true;
+void ScanTask::update100FileStatus(QStringList& fileMap)
+{
+    // 更新临时数据
+    for (auto& f : fileMap) {
+        mFilesForScan.remove(f);
+        mFilesScanned << f;
+    }
+    DataBase::getInstance().updateTempTaskFile(getTaskId(), mFilesForScan, mFilesScanned);
 }
 
 QPair<QString, QString> ScanTask::getScanFileResult(const QString& filePath)
@@ -365,7 +371,7 @@ void ScanTask::scanFile(const QString& filePath)
     const QString& meta = QString("%1/meta.txt").arg(tmpDirPath);
     const QString& ctx = QString("%1/ctx.txt").arg(tmpDirPath);
 
-    PolicyGroup::MatchResult matchResult = PolicyGroup::PG_MATCH_ERR;
+    MatchResult matchResult = MatchResult::PG_MATCH_ERR;
 
 
     // 重用结果 ...
@@ -390,20 +396,20 @@ void ScanTask::scanFile(const QString& filePath)
         const auto p = mPoliciesIdx[i];
 
         matchResult = p->match(filePath, meta, ctx);
-        if (matchResult == PolicyGroup::PG_MATCH_OK) {
+        if (matchResult == MatchResult::PG_MATCH_OK) {
             TASK_SCAN_LOG_INFO << "id: " << i << " Matched(规则匹配)!";
         }
-        else if (matchResult == PolicyGroup::PG_MATCH_ERR) {
+        else if (matchResult == MatchResult::PG_MATCH_ERR) {
             TASK_SCAN_LOG_INFO << "id: " << i << " err(出错)!";
         }
-        else if (matchResult == PolicyGroup::PG_MATCH_NO) {
+        else if (matchResult == MatchResult::PG_MATCH_NO) {
             TASK_SCAN_LOG_INFO << "id: " << i << " No(规则/例外规则未命中)!";
         }
-        else if (matchResult == PolicyGroup::PG_MATCH_EXCEPT) {
+        else if (matchResult == MatchResult::PG_MATCH_EXCEPT) {
             TASK_SCAN_LOG_INFO << "id: " << i << " Except(例外命中)!";
         }
         else {
-            TASK_SCAN_LOG_WARN << "NOT SUPPORTED RESULT: " << matchResult;
+            TASK_SCAN_LOG_WARN << "NOT SUPPORTED RESULT!";
         }
     }
 
@@ -446,23 +452,18 @@ void ScanTask::run()
         }
         else if (mTaskStatus == ScanTaskStatus::Running) {
             mIsRunning = true;
-            QMap<QString, QString> fileMap;
-            if (pop100File(fileMap)) {
-                if (fileMap.size() <= 0) {
-                    taskFinished();
-                    TASK_SCAN_LOG_INFO << "Finish scan Task: " << getTaskId();
-                    continue;
-                }
-
-                TASK_SCAN_LOG_INFO << "start scann '" << fileMap.size() << "' files ...";
-                for (const auto& f : fileMap.keys()) {
-                    scanFile(f);
-                }
+            QStringList fileMap;
+            pop100File(fileMap);
+            if (fileMap.size() <= 0) {
+                taskFinished();
+                TASK_SCAN_LOG_INFO << "Finish scan Task: " << getTaskId();
+                continue;
             }
-            else {
-                mTaskStatus = ScanTaskStatus::Finished;
-                TASK_SCAN_LOG_INFO << "Finish task: " << getTaskId();
+            TASK_SCAN_LOG_INFO << "start scann '" << fileMap.size() << "' files ...";
+            for (const auto& f : fileMap) {
+                scanFile(f);
             }
+            update100FileStatus(fileMap);
         }
         else if (mTaskStatus == ScanTaskStatus::Finished) {
             // 增量扫描

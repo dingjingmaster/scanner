@@ -25,6 +25,14 @@ enum class RiskLevel
     High
 };
 
+enum class MatchResult
+{
+    PG_MATCH_ERR,       // 出错
+    PG_MATCH_EXCEPT,    // 命中例外
+    PG_MATCH_OK,        // 命中策略
+    PG_MATCH_NO,        // 没有命中
+};
+
 class RuleBase
 {
 public:
@@ -233,13 +241,6 @@ private:
  */
 class PolicyGroup
 {
-public:
-    typedef enum {
-        PG_MATCH_ERR,       // 出错
-        PG_MATCH_EXCEPT,    // 命中例外
-        PG_MATCH_OK,        // 命中策略
-        PG_MATCH_NO,        // 没有命中
-    } MatchResult;
 public:
     PolicyGroup(const QString& id, const QString& name);
     ~PolicyGroup();
