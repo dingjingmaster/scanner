@@ -45,7 +45,7 @@ void RuleBase::parseRule(const QJsonValue & rule)
     qWarning() << "RuleBase::parseRule, This is Not supported, Please check you code!";
 }
 
-bool RuleBase::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
+bool RuleBase::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
     return false;
 }
@@ -215,7 +215,7 @@ void FileTypeRule::parseRule(const QJsonValue & rule)
     }
 }
 
-bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
+bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
     return false;
 }
@@ -427,9 +427,9 @@ void RegexpRule::parseRule(const QJsonValue & rule)
     }
 }
 
-bool RegexpRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
+bool RegexpRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
-    return RuleBase::matchRule(filePath, metaPath, ctxPath, ctx, res);
+    return RuleBase::matchRule(filePath, metaPath, ctxPath);
 }
 
 void RegexpRule::setIgnoreCase(bool ignoreCase)
@@ -526,7 +526,7 @@ int KeywordRule::getWightByKeyword(const QString & keyword) const
     return 0;
 }
 
-bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
+bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
 #define TASK_SCAN_LOG_INFO       qInfo() \
     << "[KeywordRule]" \
@@ -552,7 +552,7 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
 
     const QString regStr = QString("(%1)").arg(ls.join("|"));
     RegexMatcher rm (regStr, !mIgnoreZhTw, !mIgnoreCase);
-    rm.match(file, ctx, 20);
+    // rm.match(file, ctx, 20);
     file.close();
 
     // 权重类型
@@ -565,12 +565,9 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
     else {
         const auto c = rm.getMatchedCount();
         if (c < mCount) {
-            ctx.clear();
-            res.clear();
             TASK_SCAN_LOG_INFO << "matched count: " << c << " Less then mini count: " << mCount;
             return ret;
         }
-        res["matchedCount"] = QString("%1").arg(c);
     }
 
 #undef TASK_SCAN_LOG_INFO
@@ -832,9 +829,9 @@ int PolicyGroup::getOrder() const
     return mOrder;
 }
 
-PolicyGroup::MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res)
+PolicyGroup::MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
-    MatchResult matchRes = PG_MATCH_ERR;
+    MatchResult matchRes = PG_MATCH_NO;
 
 #define TASK_SCAN_LOG_INFO       qInfo() \
     << "[TaskId: " << mId \
@@ -857,6 +854,9 @@ PolicyGroup::MatchResult PolicyGroup::match(const QString& filePath, const QStri
     }
 #endif
 
+    // 例外命中数量
+    // 规则命中数量
+
     // 例外
     quint64 expInt = 0;
     quint64 matchInt = 0;
@@ -864,9 +864,10 @@ PolicyGroup::MatchResult PolicyGroup::match(const QString& filePath, const QStri
     const qint64 minMatchCount = getRuleHitCount();
     auto exceptRules = mExceptRules.values();
     for (const auto& e : exceptRules) {
-        if (e->matchRule(filePath, metaPath, ctxPath, ctx, res)) {
+        if (e->matchRule(filePath, metaPath, ctxPath)) {
             expInt++;
         }
+
         if (minExceptCount >= 0 && expInt >= minExceptCount) {
 
         }
@@ -880,7 +881,7 @@ PolicyGroup::MatchResult PolicyGroup::match(const QString& filePath, const QStri
     // 匹配
     auto rules = mRules.values();
     for (const auto& r : rules) {
-        if (r->matchRule(filePath, metaPath, ctxPath, ctx, res)) {
+        if (r->matchRule(filePath, metaPath, ctxPath)) {
             matchInt++;
         }
     }

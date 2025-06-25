@@ -46,8 +46,7 @@ public:
     const QString &getRuleId() const;
 
     virtual void parseRule(const QJsonValue& rule);
-    virtual bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res);
-    // virtual bool exceptRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, const QList<QString>& ctx, QMap<QString, QString>& res);
+    virtual bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath);
 
 private:
     bool                                        mExactMatch;
@@ -78,7 +77,7 @@ public:
     ~FileTypeRule() override = default;
 
     void parseRule(const QJsonValue& rule) override;
-    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res) override;
+    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath) override;
 
 private:
     void setModifyTimes(const QString& start, const QString& end);
@@ -159,7 +158,7 @@ public:
     int getWightByRegex (const QString &regex) const;
 
     void parseRule(const QJsonValue& rule) override;
-    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res) override;
+    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath) override;
 
 private:
     void addCurrentMatchCount(qint64 c=1);
@@ -201,7 +200,7 @@ public:
     void parseRule(const QJsonValue & rule) override;
     int getWightByKeyword(const QString &keyword) const;
 
-    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res) override;
+    bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath) override;
 
 private:
     void setWildcard(bool c);
@@ -265,7 +264,7 @@ public:
     void setOrder(int order);
     int getOrder() const;
 
-    MatchResult match (const QString& filePath, const QString& metaPath, const QString& ctxPath, QList<QString>& ctx, QMap<QString, QString>& res);
+    MatchResult match (const QString& filePath, const QString& metaPath, const QString& ctxPath);
 
 private:
     int                                         mOrder;

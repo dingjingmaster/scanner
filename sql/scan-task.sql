@@ -18,18 +18,26 @@ CREATE TABLE scan_task (
 CREATE TABLE scan_result (
     `file_path`                                             TEXT                                NOT NULL,               -- 文件绝对路径
     `file_md5`                                              TEXT                                NOT NULL,               -- 文件内容MD5
-    `policy_id`                                             TEXT                DEFAULT ''      NOT NULL,               -- 命中的策略，以 {] 分割
+    `policy_id`                                             TEXT                DEFAULT ''      NOT NULL,               -- 命中的策略, 以 {] 分割
+    `mis_policy_id`                                         TEXT                DEFAULT ''      NOT NULL,               -- 未命中的策略, 以 {] 分割
     `scan_finished_time`                                    INTEGER             DEFAULT 0       NOT NULL,               -- 扫描结束时间
     `file_type`                                             VARCHAR             DEFAULT ''      NOT NULL,               -- 文件类型
     `file_ext_name`                                         VARCHAR                             NOT NULL,               -- 文件扩展名
     `file_size`                                             INTEGER                             NOT NULL,               -- 文件大小
-    UNIQUE (file_path)
+    `content`                                               TEXT                DEFAULT ''      NOT NULL,               -- 敏感上下文, 要包含 policy_id
+    PRIMARY KEY (file_path)
+);
+
+CREATE TABLE policy_id (
+    `policy_id`                                             VARCHAR                             NOT NULL,               -- 策略ID
+    `is_checked`                                            TINYINT             DEFAULT 1       NOT NULL,               -- 是否检查过：0 - 不存在，1 - 存在
+    PRIMARY KEY (policy_id)
 );
 
 -- 每个任务一张表
-CREATE TABLE task_id (
-    `file_path`                                             TEXT                                NOT NULL,               -- 文件绝对路径
-    `file_md5`                                              TEXT                                NOT NULL,               -- 文件内容 MD5
-    `is_finished`                                           TINYINT             DEFAULT 0       NOT NULL,               -- 是否完成扫描：0 - 没完成，1 - 完成
-    PRIMARY KEY (file_path)
-);
+-- CREATE TABLE task_id (
+--     `file_path`                                             TEXT                                NOT NULL,               -- 文件绝对路径
+--     `file_md5`                                              TEXT                                NOT NULL,               -- 文件内容 MD5
+--     `is_finished`                                           TINYINT             DEFAULT 0       NOT NULL,               -- 是否完成扫描：0 - 没完成，1 - 完成
+--     PRIMARY KEY (file_path)
+-- );

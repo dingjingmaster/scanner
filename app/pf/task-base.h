@@ -123,6 +123,10 @@ private:
     QMap<QString, std::shared_ptr<PolicyGroup>>     mPolicies;
     QMap<int, std::shared_ptr<PolicyGroup>>         mPoliciesIdx;
     QList<int>                                      mPoliciesOrderIdx;
+
+    // 扫描任务相关
+    QSet<QString>                                   mFilesForScan;
+    QSet<QString>                                   mFilesScanned;
 };
 
 

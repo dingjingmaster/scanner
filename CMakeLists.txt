@@ -25,8 +25,8 @@ add_definitions(
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
         -D INSTALL_PATH=\\"/usr/local/andsec\\"
-#        -D DATA_DIR=\\"/var/lib/andsec/scanner/\\"
         -D DATA_DIR=\\"/tmp\\"
+#        -D DATA_DIR=\\"/var/lib/andsec/scanner/\\"
         -D PACKAGE_VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\")
 
 find_package (PkgConfig)

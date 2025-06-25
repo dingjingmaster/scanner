@@ -184,8 +184,10 @@ const QSet<QString> & ScanTask::getTaskBypassPath() const
 
 void ScanTask::scanFiles()
 {
-    // @TODO:// 暂时把所有要扫描的文件路径保存到内存，后续保存到文件中，避免占用太多内存
     TASK_SCAN_LOG_INFO << "Start scan files";
+
+    mFilesForScan.clear();
+    mFilesScanned.clear();
 
     auto isInScanDir = [&](const QString & path) -> bool {
         C_RETURN_VAL_IF_OK("/" == path, true);
@@ -274,29 +276,26 @@ void ScanTask::scanFiles()
         return files;
     };
 
-    QSet<QString> filesForScan;
-
-    // 检查是否存在，存在则读取，否则扫描
-    for (const auto& d : mTaskScanPath) {
-        TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
-        if (isInScanDir(d)) {
-            filesForScan += getDirFiles(d);
+    // 第一次扫描 -- 检查是否存在，存在则读取，否则扫描
+    if (!DataBase::getInstance().checkTempTaskFileExist(getTaskId())) {
+        QSet<QString> filesForScan;
+        for (const auto& d : mTaskScanPath) {
+            TASK_SCAN_LOG_INFO << "遍历扫描路径: " << d;
+            if (isInScanDir(d)) {
+                filesForScan += getDirFiles(d);
+            }
+            else {
+                TASK_SCAN_LOG_INFO << "例外文件夹: " << d;
+            }
         }
-        else {
-            TASK_SCAN_LOG_INFO << "例外文件夹: " << d;
-        }
+        DataBase::getInstance().saveTempTaskFileFirst(getTaskId(), filesForScan);
+        DataBase::getInstance().updateTotalFile(getTaskId(), filesForScan.size());
+        mFilesForScan = filesForScan;
+        TASK_SCAN_LOG_INFO << "All files: " << filesForScan.size();
     }
-
-    // 保存 所有 要扫描的文件
-    DataBase::getInstance().createTaskTable(getTaskId());
-    for (const auto& d : filesForScan) {
-        DataBase::getInstance().insertTaskTable(getTaskId(), Utils::formatPath(d), "");
+    else {
+        DataBase::getInstance().loadTempTaskFile(getTaskId(), mFilesForScan, mFilesScanned);
     }
-    DataBase::getInstance().updateTotalFile(getTaskId(), filesForScan.size());
-    TASK_SCAN_LOG_INFO << "All files: " << filesForScan.size();
-
-    // 解析文件内容 并 扫描
-    TASK_SCAN_LOG_INFO << "Finish scan files";
 }
 
 void ScanTask::taskFinished()
@@ -310,7 +309,16 @@ bool ScanTask::pop100File(QMap<QString, QString> & fileMap) const
 {
     fileMap.clear();
 
-    return DataBase::getInstance().get100FileByTaskId(getTaskId(), fileMap);
+    if (mFilesForScan.isEmpty()) {
+        return false;
+    }
+
+    for (auto& f : mFilesForScan) {
+        fileMap[f] = "";
+        C_BREAK_IF_OK(fileMap.count() >= 100);
+    }
+
+    return true;
 }
 
 QPair<QString, QString> ScanTask::getScanFileResult(const QString& filePath)
@@ -324,7 +332,7 @@ QPair<QString, QString> ScanTask::getScanFileResult(const QString& filePath)
 void ScanTask::fileScanFinished(const QString& path, const QString& md5, bool isHit, const QList<QString>& ctx)
 {
     // 更新临时表状态
-    DataBase::getInstance().updateTaskTable(getTaskId(), path, md5, true);
+    // DataBase::getInstance().updateTaskTable(getTaskId(), path, md5, true);
 
     // TODO:// 更新 结果表状态
     if (isHit) {
@@ -355,24 +363,20 @@ void ScanTask::scanFile(const QString& filePath)
     }
 
     const QString& meta = QString("%1/meta.txt").arg(tmpDirPath);
-    const QString& ct = QString("%1/ctx.txt").arg(tmpDirPath);
+    const QString& ctx = QString("%1/ctx.txt").arg(tmpDirPath);
 
-    // 获取扫描结果相关信息, md5、policy_id
-    const QString realMd5 = Utils::getFileMD5(filePath);
-
-    bool hasMatched = false;
-    QList<QString> ctx;
-    QMap<QString, QString> res;
-
-    // 优先级，扫描按优先级扫描
-
-    // 上下文
-    // 前边20 后边20
+    PolicyGroup::MatchResult matchResult = PolicyGroup::PG_MATCH_ERR;
 
 
     // 重用结果 ...
     // 文件 + md5 一样，则获取所有规则ID
     //      检测规则Id
+
+
+    // 优先级，扫描按优先级扫描
+
+    // 上下文
+    // 前边20 后边20
 
 
     // 先检查例外：
@@ -385,17 +389,28 @@ void ScanTask::scanFile(const QString& filePath)
         }
         const auto p = mPoliciesIdx[i];
 
-        if (!p->match(filePath, meta, ct, ctx, res)) {
-            TASK_SCAN_LOG_INFO << "File " << filePath << " does not match idx: " << p->getPolicyGroupName();
-            continue;
+        matchResult = p->match(filePath, meta, ctx);
+        if (matchResult == PolicyGroup::PG_MATCH_OK) {
+            TASK_SCAN_LOG_INFO << "id: " << i << " Matched(规则匹配)!";
         }
-        hasMatched = true;
+        else if (matchResult == PolicyGroup::PG_MATCH_ERR) {
+            TASK_SCAN_LOG_INFO << "id: " << i << " err(出错)!";
+        }
+        else if (matchResult == PolicyGroup::PG_MATCH_NO) {
+            TASK_SCAN_LOG_INFO << "id: " << i << " No(规则/例外规则未命中)!";
+        }
+        else if (matchResult == PolicyGroup::PG_MATCH_EXCEPT) {
+            TASK_SCAN_LOG_INFO << "id: " << i << " Except(例外命中)!";
+        }
+        else {
+            TASK_SCAN_LOG_WARN << "NOT SUPPORTED RESULT: " << matchResult;
+        }
     }
 
-    const QString& md5 = Utils::getFileMD5(filePath);
+    // const QString& md5 = Utils::getFileMD5(filePath);
 
     // 更新扫描状态
-    fileScanFinished(filePath, md5, hasMatched, QList<QString>());
+    // fileScanFinished(filePath, md5, hasMatched, QList<QString>());
 }
 
 void ScanTask::stop()
@@ -443,6 +458,10 @@ void ScanTask::run()
                 for (const auto& f : fileMap.keys()) {
                     scanFile(f);
                 }
+            }
+            else {
+                mTaskStatus = ScanTaskStatus::Finished;
+                TASK_SCAN_LOG_INFO << "Finish task: " << getTaskId();
             }
         }
         else if (mTaskStatus == ScanTaskStatus::Finished) {

@@ -27,8 +27,12 @@ PolicyFilter::PolicyFilter(int argc, char ** argv)
         for (const auto &f : dirs) {
             if (f.startsWith("scan-task-")) {
                 QString policyFile = Utils::formatPath(QString("%1/%2").arg(mPolicyDir.absolutePath()).arg(f));
+
+                // TODO://如果是空文件，则删除此任务相关的所有数据
+
                 if (checkFileNeedParse(policyFile)) {
                     if (TaskManager::getInstance()->parseScanTask(policyFile)) {
+                        // TODO:// 换个地方保存???
                         updatePolicyFile(policyFile);
                         qInfo() << "Success parse scan task: " << policyFile;
                         TaskManager::getInstance()->startScanTask(TaskManager::getInstance()->parseTaskId(policyFile));
@@ -43,6 +47,7 @@ PolicyFilter::PolicyFilter(int argc, char ** argv)
             }
         }
 
+        // TODO://删除不需要的任务，后续如果下发内容改变，则清空旧的文件，此处解析到后要删除旧任务相关数据
         for (const auto &f : mPolicyFile.keys()) {
             if (!QFile::exists(f)) {
                 TaskManager::getInstance()->stopScanTask(TaskManager::getTaskIdByPolicyFile(f));

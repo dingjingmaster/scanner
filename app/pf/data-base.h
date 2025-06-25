@@ -4,6 +4,7 @@
 
 #ifndef andsec_scanner_DATA_BASE_H
 #define andsec_scanner_DATA_BASE_H
+#include <QSet>
 #include <QObject>
 #include <QDateTime>
 
@@ -42,16 +43,23 @@ public:
     // scan result
     QPair<QString, QString> getScanResultPolicyIdAndMd5(const QString& filePath) const;
 
+    // 扫描任务临时文件
+    bool checkTempTaskFileExist(const QString& taskId);
+    void saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files);
+    void loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned);
+    void updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned);
+    // bool get100FileByTaskId(const QString& taskId, QMap<QString, QString>& files) const;
+
     // task table
-    void createTaskTable(const QString& taskId) const;
+    void createPolicyIdTable() const;
     QString getTaskFileMd5(const QString& taskId, const QString& filePath) const; // 获取已保存的md5, 根据结果中的策略id检查是否无须扫描
-    bool get100FileByTaskId(const QString& taskId, QMap<QString, QString>& files) const;
-    bool checkTaskTableFileExists(const QString& taskId, const QString& filePath) const;
-    void insertTaskTable(const QString& taskId, const QString& filePath, const QString& md5) const;
-    void updateTaskTable(const QString& taskId, const QString& filePath, const QString& md5, bool isFinished) const;
+    // bool checkTaskTableFileExists(const QString& taskId, const QString& filePath) const;
+    // void insertTaskTable(const QString& taskId, const QString& filePath, const QString& md5) const;
+    // void updateTaskTable(const QString& taskId, const QString& filePath, const QString& md5, bool isFinished) const;
 
 private:
     explicit DataBase(QObject *parent = nullptr);
+
 private:
     static DataBase                         gInstance;
     std::shared_ptr<sqlite3_wrap::Sqlite3>  mDB;

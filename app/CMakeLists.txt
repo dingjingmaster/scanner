@@ -23,6 +23,7 @@ target_include_directories(andsec-scanner PUBLIC
         ${JAVA_HOME}/include
         ${JAVA_HOME}/include/linux
         ${CMAKE_SOURCE_DIR}/app/hs-wrap/src
+        ${CMAKE_SOURCE_DIR}/app/sqlite3-wrap/src
 )
 target_link_libraries(andsec-scanner PUBLIC
         ${HS_LIBRARIES}

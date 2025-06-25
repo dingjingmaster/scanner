@@ -9,7 +9,9 @@
 
 #include <glib.h>
 
-#include "../sqlite3-wrap/src/sqlite3-wrap.h"
+#include "sqlite3-wrap.h"
+
+#define TASK_TMP_SCAN_FILE                      DATA_DIR"/andsec-task-"
 
 #define SCAN_TASK_TABLE \
     "CREATE TABLE scan_task (" \
@@ -34,19 +36,21 @@
     "   `file_path`                     TEXT                            NOT NULL," \
     "   `file_md5`                      TEXT                            NOT NULL," \
     "   `policy_id`                     TEXT            DEFAULT ''      NOT NULL," \
+    "   `mis_policy_id`                 TEXT            DEFAULT ''      NOT NULL," \
     "   `scan_finished_time`            INTEGER         DEFAULT 0       NOT NULL," \
     "   `file_type`                     VARCHAR         DEFAULT ''      NOT NULL," \
     "   `file_ext_name`                 VARCHAR                         NOT NULL," \
     "   `file_size`                     INTEGER                         NOT NULL," \
+    "   `content`                       TEXT            DEFAULT ''      NOT NULL," \
     "   PRIMARY KEY (file_path)" \
     ");"
 
-#define SCAN_TABLE \
-    "CREATE TABLE T%1 (" \
-    "   `file_path`                     TEXT                            NOT NULL," \
-    "   `file_md5`                      TEXT                            NOT NULL," \
-    "   `is_finished`                   TINYINT         DEFAULT 0       NOT NULL," \
-    "   PRIMARY KEY(file_path)" \
+#define POLICY_ID \
+    "CREATE policy_id (" \
+    "   `policy_id`                     VARCHAR                         NOT NULL," \
+    "   `is_checked`                    TINYINT         DEFAULT 1       NOT NULL," \
+    "   `dirty`                         TINYINT         DEFAULT 0       NOT NULL," \
+    "   PRIMARY KEY (policy_id)" \
     ");"
 
 
@@ -84,6 +88,12 @@ void DataBase::initDB() const
         qWarning() << "Failed to execute scan_task: " << ret << "  error: " << mDB->lastError();
         ::exit(-1);
     }
+
+    ret = mDB->execute(POLICY_ID);
+    if (SQLITE_OK != ret && (!(SQLITE_ERROR == ret && mDB->lastError().contains("exists")))) {
+        qWarning() << "Failed to execute policy_id: " << ret << "  error: " << mDB->lastError();
+        ::exit(-1);
+    }
 }
 
 void DataBase::insertTask(const QString & taskId, const QString & taskName, const QString & scanDir, const QString & scanDirExp, const QString & scanExt, const QString & scanExtExp, int taskStatus, int scanMode) const
@@ -117,13 +127,6 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName, cons
     }
 }
 
-void DataBase::createTaskTable(const QString & taskId) const
-{
-    if (!mDB->checkTableIsExist(taskId)) {
-        mDB->execute(QString(SCAN_TABLE).arg(taskId).toUtf8().constData());
-    }
-}
-
 QString DataBase::getTaskFileMd5(const QString& taskId, const QString& filePath) const
 {
     sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5 FROM T%1 WHERE file_path = ?;").arg(taskId));
@@ -135,10 +138,11 @@ QString DataBase::getTaskFileMd5(const QString& taskId, const QString& filePath)
     return md5S;
 }
 
-bool DataBase::checkTaskTableFileExists(const QString & taskId, const QString & filePath) const
-{
-    return mDB->checkKeyExist("T" + taskId, "file_path", filePath);
-}
+#if 0
+// bool DataBase::checkTaskTableFileExists(const QString & taskId, const QString & filePath) const
+// {
+//     return mDB->checkKeyExist("T" + taskId, "file_path", filePath);
+// }
 
 void DataBase::insertTaskTable(const QString & taskId, const QString & filePath, const QString& md5) const
 {
@@ -197,6 +201,20 @@ void DataBase::updateTaskTable(const QString& taskId, const QString& filePath, c
 
 bool DataBase::get100FileByTaskId(const QString & taskId, QMap<QString, QString>& files) const
 {
+    //
+    QMap<QString, short> ctx;
+
+    const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to open file: " << path;
+        return false;
+    }
+    file.close();
+
+
+
+    /*
     sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_path, file_md5 FROM T%1 WHERE is_finished = 0 LIMIT 100;").arg(taskId));
     for (auto it = query.begin(); it != query.end(); ++it) {
         const auto filePath = (*it).get<QString>(0);
@@ -204,7 +222,11 @@ bool DataBase::get100FileByTaskId(const QString & taskId, QMap<QString, QString>
         files[filePath] = md5S;
     }
     return (SQLITE_OK == query.finish());
+    */
+
+    return false;
 }
+#endif
 
 void DataBase::updateTotalFile(const QString & taskId, qint64 totalFile) const
 {
@@ -320,6 +342,84 @@ QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& fil
     query.finish();
 
     return QPair<QString, QString>("", "");
+}
+
+bool DataBase::checkTempTaskFileExist(const QString& taskId)
+{
+    const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
+
+    return QFile::exists(path);
+}
+
+void DataBase::saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files)
+{
+    const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to open file: " << path;
+        return;
+    }
+    for (auto& f : files) {
+        const QString line = QString("%1{|]0\n").arg(f);
+        file.write(line.toUtf8());
+    }
+    file.close();
+}
+
+void DataBase::loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned)
+{
+    const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to open file: " << path;
+        return;
+    }
+
+    while (!file.atEnd()) {
+        const QString line = file.readLine();
+        const auto arr = line.split("{|]");
+        if (arr.count() != 2) {
+            continue;
+        }
+        if (arr.at(1).toInt()) {
+            filesScanned << arr.at(0);
+        }
+        else {
+            filesForScan << arr.at(0);
+        }
+    }
+
+    file.close();
+}
+
+void DataBase::updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned)
+{
+    const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
+    const QString pathTmp = QString("%1%2.tmp").arg(TASK_TMP_SCAN_FILE).arg(taskId);
+    QFile file(pathTmp);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to open file: " << pathTmp;
+        return;
+    }
+
+    for (auto& f : filesForScan) {
+        const QString line = QString("%1{|]0\n").arg(f);
+        file.write(line.toUtf8());
+    }
+    for (auto& f : filesScanned) {
+        const QString line = QString("%1{|]1\n").arg(f);
+        file.write(line.toUtf8());
+    }
+    file.close();
+
+    QFile::rename(pathTmp, path);
+}
+
+void DataBase::createPolicyIdTable() const
+{
+    if (!mDB->checkTableIsExist("policy_id")) {
+        mDB->execute(POLICY_ID);
+    }
 }
 
 DataBase::DataBase(QObject* parent)
