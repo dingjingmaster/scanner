@@ -543,14 +543,43 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
     QFile file(filePath);
     C_RETURN_VAL_IF_FAIL(file.open(QIODevice::ReadOnly | QIODevice::Text), false);
 
+    auto regSpecialChar = [=] (const QString& str) -> QString {
+        // TODO:// 后续优化性能
+        QString str0 = str;
+        QString str1 = str0.replace("\\", "\\\\");
+        QString str2 = str1.replace("|", "\\|");
+        QString str3 = str2.replace("(", "\\(");
+        QString str4 = str3.replace(")", "\\)");
+        QString str5 = str4.replace("[", "\\[");
+        QString str6 = str5.replace("]", "\\]");
+        QString str7 = str6.replace("$", "\\$");
+        QString str8 = str7.replace("*", "\\*");
+        QString str9 = str8.replace("+", "\\+");
+        QString str10 = str9.replace(".", "\\.");
+        QString str11 = str10.replace("?", "\\?");
+        QString str12 = str11.replace("^", "\\^");
+        QString str13 = str12.replace("{", "\\{");
+        QString str14 = str13.replace("}", "\\}");
+        return str14;
+    };
 
-    // TODO:// 支持混淆
     QStringList ls;
     for (auto& l : mKeywordAndWeight.keys()) {
-        ls << l.replace("|", "\\|");
+        QString reg = l;
+        if (mIgnoreConfuse) {
+            auto arr = l.split("");
+            arr.removeAll("");
+            reg = arr.join(".{0,15}");
+            reg = reg.replace("|", "\\|");
+        }
+        ls << regSpecialChar(reg);
     }
+    TASK_SCAN_LOG_INFO << "keywords: " << mKeywordAndWeight.keys();
+    TASK_SCAN_LOG_INFO << "keywords regs 1: " << ls;
 
+    QList<QString> ctx;
     const QString regStr = QString("(%1)").arg(ls.join("|"));
+    TASK_SCAN_LOG_INFO << "keywords regs 2: " << regStr;
     RegexMatcher rm (regStr, !mIgnoreZhTw, !mIgnoreCase);
     rm.match(file, ctx, 20);
     file.close();
