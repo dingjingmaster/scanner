@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <macros/macros.h>
 
+#include "data-base.h"
 #include "regex-matcher.h"
 #include "utils.h"
 
@@ -820,6 +821,9 @@ void PolicyGroup::parseRule(const QJsonArray& rule)
             else {
                 mRules[ruleId] = rT;
             }
+
+            // 保存 rule_id
+            DataBase::getInstance().updateRuleId(ruleId);
         }
     }
 }

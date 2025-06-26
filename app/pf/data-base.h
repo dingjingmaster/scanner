@@ -40,6 +40,11 @@ public:
     void updateTaskStatusStopped(const QString& taskId) const;
     void updateTaskStatusFinished(const QString& taskId) const;
 
+    // 保存 rule_id
+    void updateRuleId (const QString& ruleId) const;
+    bool checkRuleIdExists(const QString& ruleId) const;
+    void showRuleId () const;
+
     // show scanTask
     void showScanTask() const;
 

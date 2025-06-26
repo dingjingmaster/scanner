@@ -51,12 +51,15 @@
     "   PRIMARY KEY (file_path)" \
     ");"
 
+#define SELECT_POLICY_ID_TABLE \
+    "SELECT rid, dirty FROM policy_id;"
+
 #define POLICY_ID \
     "CREATE TABLE policy_id (" \
-    "   `policy_id`                     VARCHAR                         NOT NULL," \
+    "   `rid`                           VARCHAR                         NOT NULL," \
     "   `is_checked`                    TINYINT         DEFAULT 1       NOT NULL," \
     "   `dirty`                         TINYINT         DEFAULT 0       NOT NULL," \
-    "   PRIMARY KEY (policy_id)" \
+    "   PRIMARY KEY (rid)" \
     ");"
 
 
@@ -136,11 +139,17 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName, cons
 
 QString DataBase::getTaskFileMd5(const QString& taskId, const QString& filePath) const
 {
-    sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5 FROM T%1 WHERE file_path = ?;").arg(taskId));
-    query.bind(0, filePath);
-    const auto iter = query.begin();
-    const auto md5S = (*iter).get<QString>(0);
-    query.finish();
+    QString md5S = "";
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5 FROM T%1 WHERE file_path = ?;").arg(taskId));
+        query.bind(0, filePath);
+        const auto iter = query.begin();
+        md5S = (*iter).get<QString>(0);
+        query.finish();
+    }
+    catch (std::exception& ex) {
+        qWarning() << "err: " << ex.what();
+    }
 
     return md5S;
 }
@@ -237,8 +246,8 @@ bool DataBase::get100FileByTaskId(const QString & taskId, QMap<QString, QString>
 
 void DataBase::updateTotalFile(const QString & taskId, qint64 totalFile) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET total_file=? WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET total_file=? WHERE task_id=?;");
         cmd.bind(1, totalFile);
         cmd.bind(2, taskId);
         cmd.execute();
@@ -250,8 +259,8 @@ void DataBase::updateTotalFile(const QString & taskId, qint64 totalFile) const
 
 void DataBase::updateFinishedFile(const QString & taskId, qint64 finishedFile) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET finished_file=? WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET finished_file=? WHERE task_id=?;");
         cmd.bind(1, finishedFile);
         cmd.bind(2, taskId);
         cmd.execute();
@@ -263,8 +272,8 @@ void DataBase::updateFinishedFile(const QString & taskId, qint64 finishedFile) c
 
 void DataBase::updateStartTime(const QString & taskId, const QDateTime& startTime) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET start_time=? WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET start_time=? WHERE task_id=?;");
         cmd.bind(1, startTime.toMSecsSinceEpoch());
         cmd.bind(2, taskId);
         cmd.execute();
@@ -276,8 +285,8 @@ void DataBase::updateStartTime(const QString & taskId, const QDateTime& startTim
 
 void DataBase::updateStopTime(const QString & taskId, const QDateTime& stopTime) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET stop_time=? WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET stop_time=? WHERE task_id=?;");
         cmd.bind(1, stopTime.toMSecsSinceEpoch());
         cmd.bind(2, taskId);
         cmd.execute();
@@ -289,8 +298,8 @@ void DataBase::updateStopTime(const QString & taskId, const QDateTime& stopTime)
 
 void DataBase::updateTaskStatusPause(const QString & taskId) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=4 WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=4 WHERE task_id=?;");
         cmd.bind(1, taskId);
         cmd.execute();
     }
@@ -301,8 +310,8 @@ void DataBase::updateTaskStatusPause(const QString & taskId) const
 
 void DataBase::updateTaskStatusRunning(const QString & taskId) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=1 WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=1 WHERE task_id=?;");
         cmd.bind(1, taskId);
         cmd.execute();
     }
@@ -313,8 +322,8 @@ void DataBase::updateTaskStatusRunning(const QString & taskId) const
 
 void DataBase::updateTaskStatusStopped(const QString & taskId) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=2 WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=2 WHERE task_id=?;");
         cmd.bind(1, taskId);
         cmd.execute();
     }
@@ -325,13 +334,75 @@ void DataBase::updateTaskStatusStopped(const QString & taskId) const
 
 void DataBase::updateTaskStatusFinished(const QString & taskId) const
 {
-    const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=3 WHERE task_id=?;");
     try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET task_status=3 WHERE task_id=?;");
         cmd.bind(1, taskId);
         cmd.execute();
     }
     catch (std::exception& e) {
         qWarning() << __FUNCTION__ << __LINE__ << "Failed to update scan_task: " << e.what();
+    }
+}
+
+void DataBase::updateRuleId(const QString& ruleId) const
+{
+    int ret = 0;
+    if (checkRuleIdExists(ruleId)) {
+        try {
+            const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE policy_id SET dirty=0 WHERE rid=?;");
+            cmd.bind(1, ruleId);
+            ret = cmd.execute();
+        }
+        catch (std::exception& ex) {
+            qWarning() << "err: " << ex.what();
+        }
+    }
+    else {
+        try {
+            const sqlite3_wrap::Sqlite3Command cmd(*mDB, "INSERT INTO policy_id VALUES (:rid, 1, 0);");
+            cmd.bind(":rid", ruleId);
+            ret = cmd.execute();
+        }
+        catch (std::exception& ex) {
+            qWarning() << "err: " << ex.what();
+        }
+    }
+    qInfo() << "ruleId: " << ruleId << ", ret: " << ret;
+    exit(0);
+}
+
+bool DataBase::checkRuleIdExists(const QString& ruleId) const
+{
+    bool ret = false;
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT rid FROM policy_id WHERE rid = ?;"));
+        query.bind(1, ruleId);
+        ret = (query.begin() != query.end());
+        query.finish();
+    }
+    catch (std::exception& ex) {
+        qWarning() << "err: " << ex.what();
+    }
+
+    return ret;
+}
+
+void DataBase::showRuleId() const
+{
+    qInfo() << SELECT_POLICY_ID_TABLE;
+
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, QString(SELECT_POLICY_ID_TABLE));
+        auto iter = query.begin();
+        for (;iter != query.end(); ++iter) {
+            qInfo() << "===========\n" \
+                << "Policy ID       : " << (*iter).get<QString>(0) << "\n" \
+                << "dirty           : " << (*iter).get<QString>(1) << "\n";
+        }
+        query.finish();
+    }
+    catch (std::exception &ex) {
+        qWarning() << ex.what();
     }
 }
 
@@ -403,18 +474,24 @@ void DataBase::showScanTask() const
 
 QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& filePath) const
 {
-    sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5, policy_id FROM scan_result WHERE file_path = ?;"));
-    query.bind(0, filePath);
-    const auto iter = query.begin();
-    if (iter != query.end()) {
-        const auto md5S = (*iter).get<QString>(0);
-        const auto policyId = (*iter).get<QString>(1);
+    QPair<QString, QString> ret("", "");
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5, policy_id FROM scan_result WHERE file_path = ?;"));
+        query.bind(0, filePath);
+        const auto iter = query.begin();
+        if (iter != query.end()) {
+            const auto md5S = (*iter).get<QString>(0);
+            const auto policyId = (*iter).get<QString>(1);
+            query.finish();
+            ret = QPair<QString, QString>(md5S, policyId);
+        }
         query.finish();
-        return QPair<QString, QString>(md5S, policyId);
     }
-    query.finish();
+    catch (std::exception& ex) {
+        qWarning() << "err: " << ex.what();
+    }
 
-    return QPair<QString, QString>("", "");
+    return ret;
 }
 
 bool DataBase::checkTempTaskFileExist(const QString& taskId) const
@@ -485,6 +562,7 @@ void DataBase::updateTempTaskFile(const QString& taskId, const QSet<QString>& fi
     }
     file.close();
 
+    QFile::remove(path);
     QFile::rename(pathTmp, path);
 }
 

@@ -31,3 +31,22 @@ target_link_libraries(parse-policy PUBLIC
 )
 
 
+add_executable(rule-id rule-id.cc
+        ../app/pf/data-base.cc
+        ../app/sqlite3-wrap/src/sqlite3-wrap.cc
+)
+target_compile_options(rule-id PUBLIC -fPIC)
+target_include_directories(rule-id PUBLIC
+        ${QT5_INCLUDE_DIRS}
+        ${GIO_INCLUDE_DIRS}
+        ${SQLITE3_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/app/pf
+        ${CMAKE_SOURCE_DIR}/app/hs-wrap/src
+        ${CMAKE_SOURCE_DIR}/app/sqlite3-wrap/src
+)
+target_link_libraries(rule-id PUBLIC
+        ${QT5_LIBRARIES}
+        ${GIO_LIBRARIES}
+        ${SQLITE3_LIBRARIES}
+)
+
