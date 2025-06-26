@@ -40,7 +40,7 @@ int main (int argc, char* argv[])
                 const auto arr = dlpContentDataList.toArray();
                 for (auto obj : arr) {
                     qInfo() << "" \
-                << "  Rule ID                : " << obj["id"].toString() << "\n" \
+                << "  Policy ID              : " << obj["id"].toString() << "\n" \
                 << "  Rule Name              : " << obj["name"].toString() << "\n" \
                 << "  Order Num              : " << obj["order_num"].toInt();
                     const auto ruleList = obj["ruleList"];
