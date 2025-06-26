@@ -31,6 +31,7 @@ CREATE TABLE scan_result (
 CREATE TABLE policy_id (
     `policy_id`                                             VARCHAR                             NOT NULL,               -- 策略ID
     `is_checked`                                            TINYINT             DEFAULT 1       NOT NULL,               -- 是否检查过：0 - 不存在，1 - 存在
+    `dirty`                                                 TINYINT             DEFAULT 0       NOT NULL,               --
     PRIMARY KEY (policy_id)
 );
 

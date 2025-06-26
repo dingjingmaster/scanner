@@ -223,6 +223,11 @@ private:
     void setKeywordAndWeight(const QString &keyword, int wight);
 
 private:
+    // 当规则命中文件时候，将相关信息缓存起来
+
+    // 当扫描的时候，先根据文件、文件MD5、策略ID来确定是否已经完成扫描
+
+private:
     QMap<QString, int>                          mKeywordAndWeight;          // keyword + wight
 
     // 属性
@@ -268,9 +273,6 @@ public:
     int getOrder() const;
 
     MatchResult match (const QString& filePath, const QString& metaPath, const QString& ctxPath);
-
-private:
-    // 命中策略后，缓存结果
 
 private:
     int                                         mOrder;

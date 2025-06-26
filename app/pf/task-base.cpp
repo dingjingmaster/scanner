@@ -371,20 +371,6 @@ void ScanTask::scanFile(const QString& filePath)
     const QString& meta = QString("%1/meta.txt").arg(tmpDirPath);
     const QString& ctx = QString("%1/ctx.txt").arg(tmpDirPath);
 
-    // 重用结果 ...
-    // 文件 + md5 一样，则获取所有规则ID
-    //      检测规则Id
-
-
-    // 优先级，扫描按优先级扫描
-
-    // 上下文
-    // 前边20 后边20
-
-
-    // 先检查例外：
-    //   1. 如果例外命中，保存策略Id，保存上下文
-    //   2. 如果策略命中，保存策略Id，保存上下文
     for (auto i : mPoliciesOrderIdx) {
         if (!mPoliciesIdx.contains(i)) {
             TASK_SCAN_LOG_WARN << "Not found policy id: " << i;
@@ -394,6 +380,10 @@ void ScanTask::scanFile(const QString& filePath)
 
         const MatchResult matchResult = p->match(filePath, meta, ctx);
         if (matchResult == MatchResult::PG_MATCH_OK) {
+            // TODO:// 生成 敏感 日志并保存
+
+
+
             TASK_SCAN_LOG_INFO << "file: " << filePath << " Matched(规则匹配)!";
         }
         else if (matchResult == MatchResult::PG_MATCH_ERR) {
@@ -409,11 +399,6 @@ void ScanTask::scanFile(const QString& filePath)
             TASK_SCAN_LOG_WARN << "NOT SUPPORTED RESULT!";
         }
     }
-
-    // const QString& md5 = Utils::getFileMD5(filePath);
-
-    // 更新扫描状态
-    // fileScanFinished(filePath, md5, hasMatched, QList<QString>());
 }
 
 void ScanTask::stop()

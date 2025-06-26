@@ -17,3 +17,17 @@ target_link_libraries(show-task PUBLIC
         ${GIO_LIBRARIES}
         ${SQLITE3_LIBRARIES}
 )
+
+
+add_executable(parse-policy parse-policy.cc)
+target_compile_options(parse-policy PUBLIC -fPIC)
+target_include_directories(parse-policy PUBLIC
+        ${QT5_INCLUDE_DIRS}
+        ${GIO_INCLUDE_DIRS}
+)
+target_link_libraries(parse-policy PUBLIC
+        ${QT5_LIBRARIES}
+        ${GIO_LIBRARIES}
+)
+
+
