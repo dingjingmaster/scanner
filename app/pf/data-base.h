@@ -40,6 +40,9 @@ public:
     void updateTaskStatusStopped(const QString& taskId) const;
     void updateTaskStatusFinished(const QString& taskId) const;
 
+    // show scanTask
+    void showScanTask() const;
+
     // scan result
     QPair<QString, QString> getScanResultPolicyIdAndMd5(const QString& filePath) const;
 

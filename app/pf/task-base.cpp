@@ -371,9 +371,6 @@ void ScanTask::scanFile(const QString& filePath)
     const QString& meta = QString("%1/meta.txt").arg(tmpDirPath);
     const QString& ctx = QString("%1/ctx.txt").arg(tmpDirPath);
 
-    MatchResult matchResult = MatchResult::PG_MATCH_ERR;
-
-
     // 重用结果 ...
     // 文件 + md5 一样，则获取所有规则ID
     //      检测规则Id
@@ -395,7 +392,7 @@ void ScanTask::scanFile(const QString& filePath)
         }
         const auto p = mPoliciesIdx[i];
 
-        matchResult = p->match(filePath, meta, ctx);
+        const MatchResult matchResult = p->match(filePath, meta, ctx);
         if (matchResult == MatchResult::PG_MATCH_OK) {
             TASK_SCAN_LOG_INFO << "file: " << filePath << " Matched(规则匹配)!";
         }

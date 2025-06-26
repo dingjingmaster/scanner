@@ -270,6 +270,9 @@ public:
     MatchResult match (const QString& filePath, const QString& metaPath, const QString& ctxPath);
 
 private:
+    // 命中策略后，缓存结果
+
+private:
     int                                         mOrder;
     QString                                     mId;
     QString                                     mName;                  // 策略名称

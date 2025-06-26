@@ -13,6 +13,12 @@
 
 #define TASK_TMP_SCAN_FILE                      DATA_DIR"/andsec-task-"
 
+#define SELECT_SCAN_TASK_TABLE \
+    "SELECT task_id, task_name, scan_task_dir, scan_task_dir_exception, " \
+    "scan_task_file_ext, scan_task_file_ext_exception, " \
+    "start_time, stop_time, total_file, finished_file, " \
+    "task_status, scan_mode, round FROM scan_task;"
+
 #define SCAN_TASK_TABLE \
     "CREATE TABLE scan_task (" \
     "   `task_id`                       VARCHAR(255)                    NOT NULL," \
@@ -27,7 +33,7 @@
     "   `finished_file`                 INTEGER         DEFAULT 0       NOT NULL," \
     "   `task_status`                   TINYINT         DEFAULT 0       NOT NULL," \
     "   `scan_mode`                     TINYINT         DEFAULT 0       NOT NULL," \
-    "   `is_first`                      TINYINT         DEFAULT 0       NOT NULL," \
+    "   `round`                         INT             DEFAULT 0       NOT NULL," \
     "   PRIMARY KEY (task_id) " \
     ");"
 
@@ -52,6 +58,7 @@
     "   `dirty`                         TINYINT         DEFAULT 0       NOT NULL," \
     "   PRIMARY KEY (policy_id)" \
     ");"
+
 
 
 DataBase DataBase::gInstance;
@@ -104,7 +111,7 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName, cons
                                            ":scan_task_file_ext, :scan_task_file_ext_exception,"
                                            ":start_time, :stop_time,"
                                            ":total_file, :finished_file,"
-                                           ":task_status, :scan_mode, :is_first"
+                                           ":task_status, :scan_mode, :round"
                                            ");");
     try {
         cmd.bind(":task_id", taskId);
@@ -113,13 +120,13 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName, cons
         cmd.bind(":scan_task_dir_exception", scanDirExp);
         cmd.bind(":scan_task_file_ext", scanExt);
         cmd.bind(":scan_task_file_ext_exception", scanExtExp);
-        cmd.bind(":start_time", 0);
+        cmd.bind(":start_time", QDateTime::currentDateTime().toMSecsSinceEpoch());
         cmd.bind(":stop_time", 0);
         cmd.bind(":total_file", 0);
         cmd.bind(":finished_file", 0);
         cmd.bind(":task_status", taskStatus);
         cmd.bind(":scan_mode", scanMode);
-        cmd.bind(":is_first", 1);
+        cmd.bind(":round", 0);
         cmd.execute();
     }
     catch (std::exception& e) {
@@ -328,6 +335,72 @@ void DataBase::updateTaskStatusFinished(const QString & taskId) const
     }
 }
 
+void DataBase::showScanTask() const
+{
+    auto getTaskStatusString = [=] (int taskStatus) -> QString {
+        switch (taskStatus) {
+        case 0: {
+            return "未开始";
+        }
+        case 1: {
+            return "扫描中";
+        }
+        case 2: {
+            return "已停止";
+        }
+        case 3: {
+            return "已完成";
+        }
+        case 4: {
+            return "已暂停";
+        }
+        case 5: {
+            return "出错";
+        }
+        default: break;
+        }
+        return "未知";
+    };
+
+    auto getTaskModeString = [=] (int taskMode) -> QString {
+        switch (taskMode) {
+        case 0: return "默认模式";
+        case 1: return "免打扰模式";
+        case 2: return "快速模式";
+        }
+        return "未知";
+    };
+
+    qInfo() << SELECT_SCAN_TASK_TABLE;
+
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, QString(SELECT_SCAN_TASK_TABLE));
+        auto iter = query.begin();
+        for (;iter != query.end(); ++iter) {
+            const qint64 startTime = (*iter).get<qint64>(6);
+            const qint64 stopTime = (*iter).get<qint64>(7);
+            qInfo() << "===========\n" \
+                << "Task ID         : " << (*iter).get<QString>(0) << "\n" \
+                << "Task Name       : " << (*iter).get<QString>(1) << "\n" \
+                << "Scan Dir        : " << (*iter).get<QString>(2).split("{]") << "\n" \
+                << "Scan Dir(N)     : " << (*iter).get<QString>(3).split("{]") << "\n" \
+                << "Scan File ext   : " << (*iter).get<QString>(4).split("{]") << "\n" \
+                << "Scan File ext(N): " << (*iter).get<QString>(5).split("{]") << "\n" \
+                << "Start Time      : " << (startTime > 0 ? QDateTime::fromMSecsSinceEpoch(startTime).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") : "null") << "\n" \
+                << "Stop Time       : " << (stopTime > 0 ? QDateTime::fromMSecsSinceEpoch(stopTime).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") : "null") << "\n" \
+                << "Total File      : " << (*iter).get<qint64>(8) << "\n" \
+                << "Finished File   : " << (*iter).get<qint64>(9) << "\n" \
+                << "Task Status     : " << getTaskStatusString((*iter).get<int>(10)) << "\n" \
+                << "Task Mode       : " << getTaskModeString((*iter).get<int>(11)) << "\n" \
+                << "Round           : " << (*iter).get<int>(12) << "\n\n\n";
+        }
+        query.finish();
+    }
+    catch (std::exception &ex) {
+        qWarning() << ex.what();
+    }
+}
+
 QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& filePath) const
 {
     sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5, policy_id FROM scan_result WHERE file_path = ?;"));
@@ -425,4 +498,5 @@ void DataBase::createPolicyIdTable() const
 DataBase::DataBase(QObject* parent)
     : QObject(parent), mDB(std::make_shared<sqlite3_wrap::Sqlite3>())
 {
+    initDB();
 }
