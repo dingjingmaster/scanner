@@ -144,7 +144,9 @@ QString DataBase::getTaskFileMd5(const QString& taskId, const QString& filePath)
         sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5 FROM T%1 WHERE file_path = ?;").arg(taskId));
         query.bind(0, filePath);
         const auto iter = query.begin();
-        md5S = (*iter).get<QString>(0);
+        if (iter != query.end()) {
+            md5S = (*iter).get<QString>(0);
+        }
         query.finish();
     }
     catch (std::exception& ex) {
@@ -270,6 +272,39 @@ void DataBase::updateFinishedFile(const QString & taskId, qint64 finishedFile) c
     }
 }
 
+void DataBase::updateFinishedFileAdd(const QString& taskId, qint64 finishedFile) const
+{
+    qint64 total = 0;
+    qint64 finished = 0;
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, "SELECT finished_file, total_file FROM scan_task WHERE task_id=?;");
+        query.bind(1, taskId);
+        const auto iter = query.begin();
+        if (iter != query.end()) {
+            finished = (*iter).get<qint64>(0);
+            total = (*iter).get<qint64>(1);
+        }
+        query.finish();
+    }
+    catch (std::exception& e) {
+        qWarning() << "Failed to update scan_task: " << e.what();
+    }
+
+    if (total <= 0 || finished + finishedFile > total) {
+        qWarning() << "Scan Task Total File Is Error!";
+    }
+
+    try {
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET finished_file=? WHERE task_id=?;");
+        cmd.bind(1, finished + finishedFile);
+        cmd.bind(2, taskId);
+        cmd.execute();
+    }
+    catch (std::exception& e) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to update scan_task: " << e.what();
+    }
+}
+
 void DataBase::updateStartTime(const QString & taskId, const QDateTime& startTime) const
 {
     try {
@@ -368,7 +403,6 @@ void DataBase::updateRuleId(const QString& ruleId) const
         }
     }
     qInfo() << "ruleId: " << ruleId << ", ret: " << ret;
-    exit(0);
 }
 
 bool DataBase::checkRuleIdExists(const QString& ruleId) const

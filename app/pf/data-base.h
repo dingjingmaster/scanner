@@ -33,6 +33,7 @@ public:
                     int taskStatus, int scanMode) const;
     void updateTotalFile(const QString& taskId, qint64 totalFile) const;
     void updateFinishedFile(const QString& taskId, qint64 finishedFile) const;
+    void updateFinishedFileAdd(const QString& taskId, qint64 finishedFile) const;
     void updateStartTime(const QString& taskId, const QDateTime& startTime) const;
     void updateStopTime(const QString& taskId, const QDateTime& stopTime) const;
     void updateTaskStatusPause(const QString& taskId) const;
