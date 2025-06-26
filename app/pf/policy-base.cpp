@@ -918,8 +918,6 @@ int PolicyGroup::getOrder() const
 
 MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
-    MatchResult matchRes = MatchResult::PG_MATCH_NO;
-
 #define TASK_SCAN_LOG_INFO       qInfo() \
     << "[TaskId: " << mId \
     << " TaskName: " << mName \
@@ -941,34 +939,13 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
     }
 #endif
 
-    auto runRule = [=] (const std::shared_ptr<RuleBase>& rb, const QString& filePath, const QString& metaPath, const QString& ctxPath) -> bool {
-        bool ret = false;
-        switch (rb->getRuleType()) {
-            case RuleType::GeneralFileAttribute: {
-                break;
-            }
-            case RuleType::GeneralFileFingerprint: {
-                break;
-            }
-            case RuleType::GeneralKeyword: {
-                ret = dynamic_cast<KeywordRule*>(rb.get())->matchRule(filePath, metaPath, ctxPath);
-                break;
-            }
-            case RuleType::GeneralRegular: {
-                break;
-            }
-        }
-        return ret;
-    };
-
     // 例外
     quint64 expInt = 0;         // 例外命中数量
-    quint64 matchInt = 0;       // 规则命中数量
     const qint64 exceptCount = mExceptRules.count();
     if (exceptCount > 0) {
         const qint64 minExceptCount = getRuleExceptCount();
         for (auto kv = mExceptRules.keyValueBegin(); kv != mExceptRules.keyValueEnd(); ++kv) {
-            if (runRule(kv->second, filePath, metaPath, ctxPath)) {
+            if (kv->second->matchRule(filePath, metaPath, ctxPath)) {
                 TASK_SCAN_LOG_INFO << "命中例外策略组ID: " << kv->first << " file: " << filePath;
                 expInt++;
             }
@@ -987,24 +964,36 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
         }
     }
 
-    return MatchResult::PG_MATCH_NO;
 
     // 匹配
-    const qint64 minMatchCount = getRuleHitCount();
-    auto rules = mRules.values();
-    for (const auto& r : rules) {
-        if (runRule(r, filePath, metaPath, ctxPath)) {
-            matchInt++;
+    quint64 matchInt = 0;       // 规则命中数量
+    const qint64 ruleCount = mRules.count();
+    if (ruleCount > 0) {
+        const qint64 minMatchCount = getRuleHitCount();
+        for (auto kv = mRules.keyValueBegin(); kv != mRules.keyValueEnd(); ++kv) {
+            if (kv->second->matchRule(filePath, metaPath, ctxPath)) {
+                TASK_SCAN_LOG_INFO << "命中策略组ID: " << kv->first << " file: " << filePath;
+                matchInt++;
+            }
+
+            // 如果配置非全量匹配
+            if (minMatchCount >= 0 && matchInt >= minMatchCount) {
+                TASK_SCAN_LOG_INFO << "命中策略, file: " << filePath;
+                return MatchResult::PG_MATCH_OK;
+            }
+        }
+
+        // 如果配置全量匹配
+        if (minMatchCount < 0 && matchInt >= minMatchCount) {
+            TASK_SCAN_LOG_INFO << "命中策略, file: " << filePath << " matchInt: " << matchInt << " rule count: " << ruleCount;
+            return MatchResult::PG_MATCH_OK;
         }
     }
-
-    // 匹配所有规则？还是匹配某几个规则？
-    // 例外所有规则？还是例外某几个规则？
 
     TASK_SCAN_LOG_INFO << "Hit exception policy: " << expInt << " matched policy: " << matchInt;
 
 #undef TASK_SCAN_LOG_INFO
 
-    return matchRes;
+    return MatchResult::PG_MATCH_NO;
 }
 
