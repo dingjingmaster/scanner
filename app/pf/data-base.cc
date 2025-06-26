@@ -12,6 +12,7 @@
 
 #include "sqlite3-wrap.h"
 #include "utils.h"
+#include "../macros/macros.h"
 
 #define TASK_TMP_SCAN_FILE                      DATA_DIR"/andsec-task-"
 
@@ -38,6 +39,11 @@
     "   `round`                         INT             DEFAULT 0       NOT NULL," \
     "   PRIMARY KEY (task_id) " \
     ");"
+
+#define SELECT_SCAN_RESULT_TABLE \
+    "SELECT file_path, file_md5, policy_id, scan_finished_time, " \
+    "file_type, file_ext_name, file_size, content " \
+    " FROM scan_result;"
 
 #define SCAN_RESULT_TABLE \
     "CREATE TABLE scan_result (" \
@@ -499,6 +505,37 @@ void DataBase::showScanTask() const
                 << "Task Status     : " << getTaskStatusString((*iter).get<int>(10)) << "\n" \
                 << "Task Mode       : " << getTaskModeString((*iter).get<int>(11)) << "\n" \
                 << "Round           : " << (*iter).get<int>(12) << "\n\n\n";
+        }
+        query.finish();
+    }
+    catch (std::exception &ex) {
+        qWarning() << ex.what();
+    }
+}
+
+void DataBase::showScanResult() const
+{
+#define SELECT_SCAN_RESULT_TABLE \
+"SELECT file_path, file_md5, policy_id, scan_finished_time, " \
+"file_type, file_ext_name, file_size, content " \
+" FROM scan_result;"
+
+    qInfo() << SELECT_SCAN_RESULT_TABLE;
+
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, QString(SELECT_SCAN_RESULT_TABLE));
+        auto iter = query.begin();
+        for (;iter != query.end(); ++iter) {
+            qInfo() << "===========\n" \
+                << "File Path       : " << (*iter).get<QString>(0) << "\n" \
+                << "File MD5        : " << (*iter).get<QString>(1) << "\n" \
+                << "Policy ID       : " << (*iter).get<QString>(2).split(0x01) << "\n" \
+                << "Finished Time   : " << QDateTime::fromMSecsSinceEpoch((*iter).get<qint64>(3)).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") << "\n" \
+                << "File Type       : " << (*iter).get<QString>(4).split(0x01) << "\n" \
+                << "File Ext Name   : " << (*iter).get<QString>(5) << "\n" \
+                << "File Size       : " << (*iter).get<qint64>(6) << "\n" \
+                << "Content         : " << (*iter).get<QString>(7) << "\n" \
+                << "\n\n";
         }
         query.finish();
     }

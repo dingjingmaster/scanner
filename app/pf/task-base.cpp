@@ -348,7 +348,7 @@ void ScanTask::fileScanFinished(const QString& path, const QString& md5, bool is
 
 void ScanTask::scanFile(const QString& filePath)
 {
-    if (!QFile::exists(filePath)) {
+    if (!QFile::exists(filePath) || Utils::getFileSize(filePath) <= 0) {
         TASK_SCAN_LOG_INFO << "Not exists file: " << filePath;
         return;
     }

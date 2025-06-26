@@ -611,7 +611,16 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
         return str14;
     };
 
-    auto getContent = [=] (const RegexMatcher& rm) -> QString {};
+    auto getContent = [=] (const RegexMatcher& rm) -> QString {
+        auto iter = rm.getResultIterator();
+        while (iter.hasNext()) {
+            auto kv = iter.next();
+            if (!kv.first.isEmpty() && !kv.second.isEmpty()) {
+                return QString("%1%2%3").arg(kv.first).arg(0x01).arg(kv.second);
+            }
+        }
+        return "";
+    };
 
     QStringList ls;
     for (auto& l : mKeywordAndWeight.keys()) {

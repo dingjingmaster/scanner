@@ -50,6 +50,7 @@ public:
     void showScanTask() const;
 
     // scan result
+    void showScanResult() const;
     bool checkScanResultItemExists(const QString& filePath) const;
     QPair<QString, QString> getScanResultPolicyIdAndMd5(const QString& filePath) const;
     void updateScanResultItems(const QString& filePath, const QString& ruleId, const QString& fileType, const QString& content) const;
