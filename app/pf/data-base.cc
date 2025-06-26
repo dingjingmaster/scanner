@@ -8,8 +8,10 @@
 #include <QDebug>
 
 #include <glib.h>
+#include <QMutex>
 
 #include "sqlite3-wrap.h"
+#include "utils.h"
 
 #define TASK_TMP_SCAN_FILE                      DATA_DIR"/andsec-task-"
 
@@ -42,9 +44,8 @@
     "   `file_path`                     TEXT                            NOT NULL," \
     "   `file_md5`                      TEXT                            NOT NULL," \
     "   `policy_id`                     TEXT            DEFAULT ''      NOT NULL," \
-    "   `mis_policy_id`                 TEXT            DEFAULT ''      NOT NULL," \
     "   `scan_finished_time`            INTEGER         DEFAULT 0       NOT NULL," \
-    "   `file_type`                     VARCHAR         DEFAULT ''      NOT NULL," \
+    "   `file_type`                     TEXT            DEFAULT ''      NOT NULL," \
     "   `file_ext_name`                 VARCHAR                         NOT NULL," \
     "   `file_size`                     INTEGER                         NOT NULL," \
     "   `content`                       TEXT            DEFAULT ''      NOT NULL," \
@@ -506,12 +507,28 @@ void DataBase::showScanTask() const
     }
 }
 
+bool DataBase::checkScanResultItemExists(const QString& filePath) const
+{
+    bool ret = false;
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_path FROM scan_result WHERE file_path = ?;"));
+        query.bind(1, filePath);
+        ret = (query.begin() != query.end());
+        query.finish();
+    }
+    catch (std::exception& ex) {
+        qWarning() << "err: " << ex.what();
+    }
+
+    return ret;
+}
+
 QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& filePath) const
 {
     QPair<QString, QString> ret("", "");
     try {
         sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT file_md5, policy_id FROM scan_result WHERE file_path = ?;"));
-        query.bind(0, filePath);
+        query.bind(1, filePath);
         const auto iter = query.begin();
         if (iter != query.end()) {
             const auto md5S = (*iter).get<QString>(0);
@@ -526,6 +543,138 @@ QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& fil
     }
 
     return ret;
+}
+
+void DataBase::updateScanResultItems(const QString& filePath, const QString& ruleId, const QString& fileType, const QString& content) const
+{
+    static QMutex lock;
+
+    lock.lock();
+
+    const QString md5 = Utils::getFileMD5(filePath);
+    const qint64 finishedTime = QDateTime::currentDateTime().toMSecsSinceEpoch();
+    const QString fileExt = Utils::getFileExtName(filePath);
+    const qint64 fileSize = Utils::getFileSize(filePath);
+
+    QMap<QString, QSet<QString>> ctx;
+    QSet<QString> ctxV;
+    ctxV << content;
+    ctx[ruleId] = ctxV;
+
+    // file type
+    QSet<QString> ft = fileType.split(0x01).toSet();
+
+    // rule id
+    QSet<QString> ruleIds;
+    ruleIds << ruleId;
+
+    // get rule_id
+    auto getRuleIds = [=] (const QSet<QString>& rules) -> QString {
+        return rules.toList().join(0x01);
+    };
+
+    // get file_type
+    auto getFileTypes = [=] (const QSet<QString>& fts) -> QString {
+        return fts.toList().join(0x01);
+    };
+
+    // get content
+    auto getContent = [=] (const QMap<QString, QSet<QString> > & gc) -> QString {
+        QStringList ctxT;
+        for (auto it = gc.keyValueBegin(); it != gc.keyValueEnd(); ++it) {
+            ctxT.append(QString("%1%2%3").arg(it->first).arg(0x01).arg(it->second.toList().join(0x01)));
+        }
+        return ctxT.join(0x02);
+    };
+
+    if (checkScanResultItemExists(filePath)) {
+        try {
+            sqlite3_wrap::Sqlite3Query query(*mDB, QString("SELECT content, file_type, policy_id FROM scan_result WHERE file_path = ?;"));
+            query.bind(1, filePath);
+            auto iter = query.begin();
+            const QString cT = (*iter).get<QString>(0);
+            const QString ftT = (*iter).get<QString>(1);
+            const QString piT = (*iter).get<QString>(2);
+
+            // update context
+            const auto arrCT = cT.split(0x02);
+            for (auto& a : arrCT) {
+                const auto arr1CT = a.split(0x01);
+                if (arr1CT.length() != 3) {
+                    continue;
+                }
+                if (ctx.contains(arr1CT[0])) {
+                    QSet<QString> v = ctx[arr1CT[0]];
+                    v << QString("%1%2%3").arg(arr1CT[1]).arg(0x01).arg(arr1CT[2]);
+                    ctx[arr1CT[0]] = v;
+                }
+                else {
+                    QSet<QString> v;
+                    v << QString("%1%2%3").arg(arr1CT[1]).arg(0x01).arg(arr1CT[2]);
+                    ctx[arr1CT[0]] = v;
+                }
+            }
+
+            // update file_type
+            const auto ftTT = ftT.split(0x01);
+            for (auto& f : ftTT) { ft << f; }
+
+            // update policy_id
+            const auto piTT = piT.split(0x01);
+            for (auto& p : piTT) { ruleIds << p; }
+
+            query.finish();
+        }
+        catch (std::exception& ex) {
+            qWarning() << "err: " << ex.what();
+        }
+
+        // update
+        try {
+            sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_result SET "
+                                                   "file_md5 = ?,"
+                                                   "policy_id = ?,"
+                                                   "scan_finished_time = ?,"
+                                                   "file_type = ?,"
+                                                   "file_size = ?,"
+                                                   "content = ? WHERE file_path = ?;");
+            cmd.bind(1, md5);
+            cmd.bind(2, getRuleIds(ruleIds));
+            cmd.bind(3, finishedTime);
+            cmd.bind(4, getFileTypes(ft));
+            cmd.bind(5, fileSize);
+            cmd.bind(6, getContent(ctx));
+            cmd.bind(7, filePath);
+            cmd.execute();
+        }
+        catch (std::exception& ex) {
+            qWarning() << "err: " << ex.what();
+        }
+    }
+    else {
+        try {
+
+            const sqlite3_wrap::Sqlite3Command cmd(*mDB, "INSERT INTO scan_result VALUES ("
+                                                   ":file_path, :file_md5,"
+                                                   ":policy_id, :scan_finished_time,"
+                                                   ":file_type, :file_ext_name,"
+                                                   ":file_size, :content"
+                                                   ");");
+            cmd.bind(":file_path", filePath);
+            cmd.bind(":file_md5", md5);
+            cmd.bind(":file_type", getRuleIds(ruleIds));
+            cmd.bind(":scan_finished_time", finishedTime);
+            cmd.bind(":file_type", getFileTypes(ft));
+            cmd.bind(":file_size", fileSize);
+            cmd.bind(":content", getContent(ctx));
+            cmd.execute();
+        }
+        catch (std::exception& ex) {
+            qWarning() << "err: " << ex.what();
+        }
+    }
+
+    lock.unlock();
 }
 
 bool DataBase::checkTempTaskFileExist(const QString& taskId) const

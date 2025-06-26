@@ -55,6 +55,7 @@ public:
 
     virtual void parseRule(const QJsonValue& rule);
     virtual bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath);
+    virtual void saveResult(const QString& filePath, const QString& metaPath, const QString& context);
 
     QString getTaskTypeString() const;
 

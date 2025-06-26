@@ -446,9 +446,7 @@ void ScanTask::run()
                 scanFile(f);
             }
             update100FileStatus(fileMap);
-            // 这两种都行
             DataBase::getInstance().updateFinishedFile(getTaskId(), mFilesScanned.count());
-            // DataBase::getInstance().updateFinishedFileAdd(getTaskId(), fileMap.count());
         }
         else if (mTaskStatus == ScanTaskStatus::Finished) {
             // 增量扫描

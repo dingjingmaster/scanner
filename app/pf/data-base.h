@@ -50,7 +50,9 @@ public:
     void showScanTask() const;
 
     // scan result
+    bool checkScanResultItemExists(const QString& filePath) const;
     QPair<QString, QString> getScanResultPolicyIdAndMd5(const QString& filePath) const;
+    void updateScanResultItems(const QString& filePath, const QString& ruleId, const QString& fileType, const QString& content) const;
 
     // 扫描任务临时文件
     bool checkTempTaskFileExist(const QString& taskId) const;

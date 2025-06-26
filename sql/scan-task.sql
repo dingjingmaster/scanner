@@ -19,9 +19,8 @@ CREATE TABLE scan_result (
     `file_path`                                             TEXT                                NOT NULL,               -- 文件绝对路径
     `file_md5`                                              TEXT                                NOT NULL,               -- 文件内容MD5
     `policy_id`                                             TEXT                DEFAULT ''      NOT NULL,               -- 命中的策略, 以 0x01 分割
-    `mis_policy_id`                                         TEXT                DEFAULT ''      NOT NULL,               -- 未命中的策略, 以 0x01 分割
     `scan_finished_time`                                    INTEGER             DEFAULT 0       NOT NULL,               -- 扫描结束时间
-    `file_type`                                             VARCHAR             DEFAULT ''      NOT NULL,               -- 文件类型
+    `file_type`                                             TEXT                DEFAULT ''      NOT NULL,               -- 文件类型
     `file_ext_name`                                         VARCHAR                             NOT NULL,               -- 文件扩展名
     `file_size`                                             INTEGER                             NOT NULL,               -- 文件大小
     `content`                                               TEXT                DEFAULT ''      NOT NULL,               -- 敏感上下文, 要包含 policy_id 0x01 key 0x01 content 0x02

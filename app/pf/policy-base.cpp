@@ -52,6 +52,26 @@ bool RuleBase::matchRule(const QString& filePath, const QString& metaPath, const
     return false;
 }
 
+void RuleBase::saveResult(const QString& filePath, const QString& metaPath, const QString& context)
+{
+    QString fileType = "";
+    QFile f(metaPath);
+    if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        while (!f.atEnd()) {
+            QString line = f.readLine();
+            if (line.startsWith("Content-Type")) {
+                const auto arr = line.split("{]");
+                if (arr.length() != 2) {
+                    continue;
+                }
+                fileType = arr[1];
+            }
+        }
+    }
+    // 保存扫描结果
+    DataBase::getInstance().updateScanResultItems(filePath, getRuleId(), fileType, context);
+}
+
 QString RuleBase::getTaskTypeString() const
 {
     switch (mType) {
@@ -591,6 +611,8 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
         return str14;
     };
 
+    auto getContent = [=] (const RegexMatcher& rm) -> QString {};
+
     QStringList ls;
     for (auto& l : mKeywordAndWeight.keys()) {
         QStringList regs;
@@ -635,6 +657,7 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
         const auto c = rm.getMatchedCount();
         if (c >= getMinMatchCount()) {
             TASK_SCAN_LOG_INFO << "matched count: " << c << " greater then mini count: " << getMinMatchCount();
+            saveResult(filePath, metaPath, getContent(rm));
             ret = true;
         }
     }
