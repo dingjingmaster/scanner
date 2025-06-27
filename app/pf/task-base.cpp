@@ -361,9 +361,11 @@ void ScanTask::scanFile(const QString& filePath)
     TASK_SCAN_LOG_INFO << "Scann file: " << filePath;
 
     // 提取文件内容
-    QTemporaryDir tmpDir;
-#ifdef DDEBUG
-    tmpDir.setAutoRemove(false);
+#if 0
+    // QTemporaryDir tmpDir;
+    // tmpDir.setAutoRemove(false);
+#else
+    const QTemporaryDir tmpDir;
 #endif
     const QString tmpDirPath = tmpDir.path();
     if (!JavaEnv::getInstance()->parseFile(filePath, tmpDirPath)) {
