@@ -21,6 +21,7 @@ add_definitions(
         -w -g
         -D QT_NO_KEYWORDS
         -D QT_MESSAGELOGCONTEXT
+        -D DDEBUG
 
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"

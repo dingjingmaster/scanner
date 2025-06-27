@@ -157,5 +157,5 @@ QString Utils::getFileExtName(const QString& filePath)
         }
     }
 
-    return extName;
+    return (extName.size() > 1) ? extName : "";
 }

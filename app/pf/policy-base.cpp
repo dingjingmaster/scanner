@@ -64,10 +64,11 @@ void RuleBase::saveResult(const QString& filePath, const QString& metaPath, cons
                 if (arr.length() != 2) {
                     continue;
                 }
-                fileType = arr[1];
+                fileType = arr[1].trimmed();
             }
         }
     }
+
     // 保存扫描结果
     DataBase::getInstance().updateScanResultItems(filePath, getRuleId(), fileType, context);
 }
@@ -616,7 +617,7 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
         while (iter.hasNext()) {
             auto kv = iter.next();
             if (!kv.first.isEmpty() && !kv.second.isEmpty()) {
-                return QString("%1%2%3").arg(kv.first).arg(0x01).arg(kv.second);
+                return QString("%1{]%2").arg(kv.first).arg(kv.second);
             }
         }
         return "";
@@ -642,11 +643,11 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
                 reg = arr.join(".{0,15}");
                 reg = reg.replace("|", "\\|");
             }
-            ls << regSpecialChar(reg);
+            // ls << regSpecialChar(reg);
+            ls << reg;
         }
     }
     TASK_SCAN_LOG_INFO << "keywords: " << mKeywordAndWeight.keys();
-    TASK_SCAN_LOG_INFO << "keywords regs 1: " << ls;
 
     QList<QString> ctx;
     const QString regStr = QString("(%1)").arg(ls.join("|"));
@@ -963,14 +964,14 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
     << "] "
 #if 0
     QFile fileM(metaPath);
-    if (fileM.open(QFile::ReadOnly)) {
-        qInfo() << "\nmeta:\n" << fileM.readAll();
+    if (fileM.open(QFile::ReadOnly | QFile::Text)) {
+        qInfo() << "\nmeta:\n" << QString(fileM.readAll());
         fileM.close();
     }
 
     QFile file(ctxPath);
-    if (file.open(QFile::ReadOnly)) {
-        qInfo() << "\ncontent:\n" << file.readAll();
+    if (file.open(QFile::ReadOnly | QFile::Text)) {
+        qInfo() << "\ncontent:\n" << QString(file.readAll());
         file.close();
     }
 #endif

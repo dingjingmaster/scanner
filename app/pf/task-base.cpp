@@ -361,7 +361,10 @@ void ScanTask::scanFile(const QString& filePath)
     TASK_SCAN_LOG_INFO << "Scann file: " << filePath;
 
     // 提取文件内容
-    const QTemporaryDir tmpDir;
+    QTemporaryDir tmpDir;
+#ifdef DDEBUG
+    tmpDir.setAutoRemove(false);
+#endif
     const QString tmpDirPath = tmpDir.path();
     if (!JavaEnv::getInstance()->parseFile(filePath, tmpDirPath)) {
         TASK_SCAN_LOG_INFO << "Failed to parse file: " << filePath;
@@ -380,10 +383,6 @@ void ScanTask::scanFile(const QString& filePath)
 
         const MatchResult matchResult = p->match(filePath, meta, ctx);
         if (matchResult == MatchResult::PG_MATCH_OK) {
-            // TODO:// 生成 敏感 日志并保存
-
-
-
             TASK_SCAN_LOG_INFO << "file: " << filePath << " Matched(规则匹配)!";
         }
         else if (matchResult == MatchResult::PG_MATCH_ERR) {

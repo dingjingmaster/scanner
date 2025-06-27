@@ -515,11 +515,6 @@ void DataBase::showScanTask() const
 
 void DataBase::showScanResult() const
 {
-#define SELECT_SCAN_RESULT_TABLE \
-"SELECT file_path, file_md5, policy_id, scan_finished_time, " \
-"file_type, file_ext_name, file_size, content " \
-" FROM scan_result;"
-
     qInfo() << SELECT_SCAN_RESULT_TABLE;
 
     try {
@@ -529,13 +524,24 @@ void DataBase::showScanResult() const
             qInfo() << "===========\n" \
                 << "File Path       : " << (*iter).get<QString>(0) << "\n" \
                 << "File MD5        : " << (*iter).get<QString>(1) << "\n" \
-                << "Policy ID       : " << (*iter).get<QString>(2).split(0x01) << "\n" \
+                << "Policy ID       : " << (*iter).get<QString>(2).split("{]") << "\n" \
                 << "Finished Time   : " << QDateTime::fromMSecsSinceEpoch((*iter).get<qint64>(3)).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") << "\n" \
-                << "File Type       : " << (*iter).get<QString>(4).split(0x01) << "\n" \
+                << "File Type       : " << (*iter).get<QString>(4).split("{]") << "\n" \
                 << "File Ext Name   : " << (*iter).get<QString>(5) << "\n" \
                 << "File Size       : " << (*iter).get<qint64>(6) << "\n" \
-                << "Content         : " << (*iter).get<QString>(7) << "\n" \
-                << "\n\n";
+                << "Content         :";
+            const auto ctArr = (*iter).get<QString>(7).split("{|]");
+            for (auto& c : ctArr) {
+                const auto arr = c.split("{]");
+                if (arr.size() != 3) {
+                    qWarning() << arr.size();
+                    continue;
+                }
+                qInfo() << "" \
+                << "    ruleId      : " << arr.at(0) << "\n" \
+                << "    keyword     : " << arr.at(1) << "\n" \
+                << "    content     : " << arr.at(2) << "\n";
+            }
         }
         query.finish();
     }
@@ -585,8 +591,7 @@ QPair<QString, QString> DataBase::getScanResultPolicyIdAndMd5(const QString& fil
 void DataBase::updateScanResultItems(const QString& filePath, const QString& ruleId, const QString& fileType, const QString& content) const
 {
     static QMutex lock;
-
-    lock.lock();
+    QMutexLocker locker(&lock);
 
     const QString md5 = Utils::getFileMD5(filePath);
     const qint64 finishedTime = QDateTime::currentDateTime().toMSecsSinceEpoch();
@@ -599,7 +604,7 @@ void DataBase::updateScanResultItems(const QString& filePath, const QString& rul
     ctx[ruleId] = ctxV;
 
     // file type
-    QSet<QString> ft = fileType.split(0x01).toSet();
+    QSet<QString> ft = fileType.split("{]").toSet();
 
     // rule id
     QSet<QString> ruleIds;
@@ -607,21 +612,21 @@ void DataBase::updateScanResultItems(const QString& filePath, const QString& rul
 
     // get rule_id
     auto getRuleIds = [=] (const QSet<QString>& rules) -> QString {
-        return rules.toList().join(0x01);
+        return rules.toList().join("{]");
     };
 
     // get file_type
     auto getFileTypes = [=] (const QSet<QString>& fts) -> QString {
-        return fts.toList().join(0x01);
+        return fts.toList().join("{]");
     };
 
     // get content
     auto getContent = [=] (const QMap<QString, QSet<QString> > & gc) -> QString {
         QStringList ctxT;
         for (auto it = gc.keyValueBegin(); it != gc.keyValueEnd(); ++it) {
-            ctxT.append(QString("%1%2%3").arg(it->first).arg(0x01).arg(it->second.toList().join(0x01)));
+            ctxT.append(QString("%1{]%2").arg(it->first).arg(it->second.toList().join("{]")));
         }
-        return ctxT.join(0x02);
+        return ctxT.join("{|]");
     };
 
     if (checkScanResultItemExists(filePath)) {
@@ -634,30 +639,30 @@ void DataBase::updateScanResultItems(const QString& filePath, const QString& rul
             const QString piT = (*iter).get<QString>(2);
 
             // update context
-            const auto arrCT = cT.split(0x02);
+            const auto arrCT = cT.split("{|]");
             for (auto& a : arrCT) {
-                const auto arr1CT = a.split(0x01);
+                const auto arr1CT = a.split("{]");
                 if (arr1CT.length() != 3) {
                     continue;
                 }
                 if (ctx.contains(arr1CT[0])) {
                     QSet<QString> v = ctx[arr1CT[0]];
-                    v << QString("%1%2%3").arg(arr1CT[1]).arg(0x01).arg(arr1CT[2]);
+                    v << QString("%1{]%2").arg(arr1CT[1]).arg(arr1CT[2]);
                     ctx[arr1CT[0]] = v;
                 }
                 else {
                     QSet<QString> v;
-                    v << QString("%1%2%3").arg(arr1CT[1]).arg(0x01).arg(arr1CT[2]);
+                    v << QString("%1{]%2").arg(arr1CT[1]).arg(arr1CT[2]);
                     ctx[arr1CT[0]] = v;
                 }
             }
 
             // update file_type
-            const auto ftTT = ftT.split(0x01);
+            const auto ftTT = ftT.split("{]");
             for (auto& f : ftTT) { ft << f; }
 
             // update policy_id
-            const auto piTT = piT.split(0x01);
+            const auto piTT = piT.split("{]");
             for (auto& p : piTT) { ruleIds << p; }
 
             query.finish();
@@ -682,7 +687,16 @@ void DataBase::updateScanResultItems(const QString& filePath, const QString& rul
             cmd.bind(5, fileSize);
             cmd.bind(6, getContent(ctx));
             cmd.bind(7, filePath);
-            cmd.execute();
+            const int ret = cmd.execute();
+
+            qInfo() << "Update:\n" \
+            << "file path       : " << filePath << "\n" \
+            << "rule ids        : " << getRuleIds(ruleIds) << "\n" \
+            << "finished time   : " << finishedTime << "\n" \
+            << "file type       : " << getFileTypes(ft) << "\n" \
+            << "file size       : " << fileSize << "\n" \
+            << "content         : " << getContent(ctx) << "\n" \
+            << "ret             : " << ret << "\n";
         }
         catch (std::exception& ex) {
             qWarning() << "err: " << ex.what();
@@ -699,19 +713,28 @@ void DataBase::updateScanResultItems(const QString& filePath, const QString& rul
                                                    ");");
             cmd.bind(":file_path", filePath);
             cmd.bind(":file_md5", md5);
-            cmd.bind(":file_type", getRuleIds(ruleIds));
+            cmd.bind(":policy_id", getRuleIds(ruleIds));
             cmd.bind(":scan_finished_time", finishedTime);
             cmd.bind(":file_type", getFileTypes(ft));
+            cmd.bind(":file_ext_name", fileExt);
             cmd.bind(":file_size", fileSize);
             cmd.bind(":content", getContent(ctx));
-            cmd.execute();
+            const int ret = cmd.execute();
+
+            qInfo() << "Insert:\n" \
+            << "file path       : " << filePath << "\n" \
+            << "md5             : " << md5 << "\n" \
+            << "rule ids        : " << getRuleIds(ruleIds) << "\n" \
+            << "finished time   : " << finishedTime << "\n" \
+            << "file type       : " << getFileTypes(ft) << "\n" \
+            << "file size       : " << fileSize << "\n" \
+            << "content         : " << getContent(ctx) << "\n" \
+            << "ret             : " << ret << "\n";
         }
         catch (std::exception& ex) {
             qWarning() << "err: " << ex.what();
         }
     }
-
-    lock.unlock();
 }
 
 bool DataBase::checkTempTaskFileExist(const QString& taskId) const
