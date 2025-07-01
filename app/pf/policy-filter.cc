@@ -15,7 +15,8 @@
 
 
 PolicyFilter::PolicyFilter(int argc, char ** argv)
-    : QCoreApplication(argc, argv), mTimer(new QTimer(this)), mPolicyDir(QString("%1/scan").arg(INSTALL_PATH))
+    : QCoreApplication(argc, argv), mTimer(new QTimer(this)),
+        mPolicyDir(QString("%1/scan").arg(INSTALL_PATH))
 {
     DataBase::getInstance().initDB();
 
@@ -26,7 +27,8 @@ PolicyFilter::PolicyFilter(int argc, char ** argv)
         const auto dirs = mPolicyDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
         for (const auto &f : dirs) {
             if (f.startsWith("scan-task-")) {
-                QString policyFile = Utils::formatPath(QString("%1/%2").arg(mPolicyDir.absolutePath()).arg(f));
+                QString policyFile = Utils::formatPath(QString("%1/%2")
+                    .arg(mPolicyDir.absolutePath()).arg(f));
 
                 // TODO://如果是空文件，则删除此任务相关的所有数据
 

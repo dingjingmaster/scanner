@@ -18,8 +18,8 @@
 #include <unistd.h>
 #include <macros/macros.h>
 
-#include "data-base.h"
 #include "utils.h"
+#include "data-base.h"
 #include "tika-wrap/src/java-env.h"
 
 #define TASK_SCAN_LOG_INFO       qInfo()    << "[TaskId: " << getTaskId() << " TaskName: " << getTaskName() << "] "
@@ -335,7 +335,8 @@ QPair<QString, QString> ScanTask::getScanFileResult(const QString& filePath)
     // 扫描结果 -- md5、policy_id
 }
 
-void ScanTask::fileScanFinished(const QString& path, const QString& md5, bool isHit, const QList<QString>& ctx)
+void ScanTask::fileScanFinished(const QString& path, const QString& md5,
+    bool isHit, const QList<QString>& ctx)
 {
     // 更新临时表状态
     // DataBase::getInstance().updateTaskTable(getTaskId(), path, md5, true);

@@ -592,6 +592,7 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
     QFile file(filePath);
     C_RETURN_VAL_IF_FAIL(file.open(QIODevice::ReadOnly | QIODevice::Text), false);
 
+#if 0
     auto regSpecialChar = [=] (const QString& str) -> QString {
         // TODO:// 后续优化性能
         QString str0 = str;
@@ -611,6 +612,7 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
         QString str14 = str13.replace("}", "\\}");
         return str14;
     };
+#endif
 
     auto getContent = [=] (const RegexMatcher& rm) -> QString {
         auto iter = rm.getResultIterator();
@@ -621,6 +623,31 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
             }
         }
         return "";
+    };
+
+    auto getRegexpStrByKeyword = [=] (const QString& kw) -> QString {
+        QStringList regs;
+        regs << kw;
+
+        if (mIgnoreZhTw) {
+            QString regTr = Utils::simpleToTradition(kw);
+            if (kw != regTr) {
+                regs << regTr;
+            }
+        }
+
+        QStringList ls;
+        for (auto& ll : regs) {
+            QString reg = ll;
+            if (mIgnoreConfuse) {
+                auto arr = ll.split("");
+                arr.removeAll("");
+                reg = arr.join(".{0,15}");
+                reg = reg.replace("|", "\\|");
+            }
+            ls << reg;
+        }
+        return QString("(%1)").arg(ls.join("|"));
     };
 
     QStringList ls;
@@ -643,7 +670,6 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
                 reg = arr.join(".{0,15}");
                 reg = reg.replace("|", "\\|");
             }
-            // ls << regSpecialChar(reg);
             ls << reg;
         }
     }
@@ -661,7 +687,32 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
 
     }
     else if (RecognitionTimes == mMode) {
+        QMap<QString, qint64> c;
+        QMap<QString, QRegExp> keyReg;
+        for (auto& l : mKeywordAndWeight.keys()) {
+            keyReg[l] = QRegExp(getRegexpStrByKeyword(l),
+                mIgnoreCase ? Qt::CaseInsensitive : Qt::CaseSensitive);
+            c[l] = 0;
+        }
 
+        auto iter = rm.getResultIterator();
+        while (iter.hasNext()) {
+            auto kv = iter.next();
+            if (!kv.first.isEmpty() && !kv.second.isEmpty()) {
+                for (auto& kr : keyReg) {
+                    if (kr.exactMatch(kv.first)) {
+                        c[kv.first]++;
+                    }
+                }
+            }
+        }
+
+
+        QString debugStr = "";
+        for (auto l = c.keyValueBegin(); l != c.keyValueEnd(); l++) {
+            debugStr += QString("keyword: %1, count: %2\n").arg(l->first).arg(l->second);
+        }
+        TASK_SCAN_LOG_INFO << "\n" << debugStr << "\n";
     }
     else {
         const auto c = rm.getMatchedCount();
