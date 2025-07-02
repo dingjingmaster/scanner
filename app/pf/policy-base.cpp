@@ -307,6 +307,8 @@ bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, c
     }
     C_RETURN_VAL_IF_FAIL(ret, false);
 
+    TASK_SCAN_LOG_INFO << "命中";
+
 #undef TASK_SCAN_LOG_INFO
 
     return ret;
