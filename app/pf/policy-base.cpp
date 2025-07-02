@@ -684,7 +684,32 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
 
     // 权重类型
     if (RecognitionScore == mMode) {
+        qint64 retTmp = 0;
 
+        QMap<QString, QRegExp> keyReg;
+        for (auto& l : mKeywordAndWeight.keys()) {
+            keyReg[l] = QRegExp(getRegexpStrByKeyword(l),
+                mIgnoreCase ? Qt::CaseInsensitive : Qt::CaseSensitive);
+        }
+
+        auto iter = rm.getResultIterator();
+        while (iter.hasNext()) {
+            auto kv = iter.next();
+            if (!kv.first.isEmpty() && !kv.second.isEmpty()) {
+                for (auto kr = keyReg.keyValueBegin(); kr != keyReg.keyValueEnd(); ++kr) {
+                    if (kr->second.exactMatch(kv.first)) {
+                        retTmp += mKeywordAndWeight[kr->first];
+                    }
+                }
+            }
+        }
+
+        if (retTmp >= getMinMatchCount()) {
+            TASK_SCAN_LOG_INFO << "[积分权重] matched count: " << retTmp << " greater then mini count: " << getMinMatchCount();
+            // FIXME:// 多保存几个上下文？每个关键词一个？
+            saveResult(filePath, metaPath, getContent(rm));
+            ret = true;
+        }
     }
     else if (RecognitionTimes == mMode) {
         QMap<QString, qint64> c;
@@ -699,25 +724,38 @@ bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, co
         while (iter.hasNext()) {
             auto kv = iter.next();
             if (!kv.first.isEmpty() && !kv.second.isEmpty()) {
-                for (auto& kr : keyReg) {
-                    if (kr.exactMatch(kv.first)) {
-                        c[kv.first]++;
+                for (auto kr = keyReg.keyValueBegin(); kr != keyReg.keyValueEnd(); ++kr) {
+                    if (kr->second.exactMatch(kv.first)) {
+                        c[kr->first]++;
                     }
                 }
             }
         }
-
-
+#if 1
         QString debugStr = "";
         for (auto l = c.keyValueBegin(); l != c.keyValueEnd(); l++) {
             debugStr += QString("keyword: %1, count: %2\n").arg(l->first).arg(l->second);
         }
         TASK_SCAN_LOG_INFO << "\n" << debugStr << "\n";
+#endif
+        qint64 retTmp = 0;
+        for (auto kv = c.keyValueBegin(); kv != c.keyValueEnd(); kv++) {
+            if (mKeywordAndWeight[kv->first] <= kv->second) {
+                retTmp++;
+            }
+        }
+        if (retTmp >= getMinMatchCount()) {
+            TASK_SCAN_LOG_INFO << "[次数权重] matched count: " << c << " greater then mini count: " << getMinMatchCount();
+            // FIXME:// 多保存几个上下文？每个关键词一个？
+            saveResult(filePath, metaPath, getContent(rm));
+            ret = true;
+        }
     }
     else {
         const auto c = rm.getMatchedCount();
         if (c >= getMinMatchCount()) {
-            TASK_SCAN_LOG_INFO << "matched count: " << c << " greater then mini count: " << getMinMatchCount();
+            TASK_SCAN_LOG_INFO << "[关闭权重]matched count: " << c << " greater then mini count: " << getMinMatchCount();
+            // FIXME:// 多保存几个上下文？每个关键词一个？
             saveResult(filePath, metaPath, getContent(rm));
             ret = true;
         }
