@@ -5,6 +5,7 @@
 #include "policy-base.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <macros/macros.h>
 
@@ -259,7 +260,56 @@ void FileTypeRule::parseRule(const QJsonValue & rule)
 
 bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
-    return false;
+#define TASK_SCAN_LOG_INFO       qInfo() \
+    << "[文件类型]"
+
+    C_RETURN_VAL_IF_FAIL(QFile::exists(filePath) && QFile::exists(metaPath) && QFile::exists(ctxPath), ret);
+
+    QFile file(filePath);
+    C_RETURN_VAL_IF_FAIL(file.open(QIODevice::ReadOnly | QIODevice::Text), false);
+
+    bool ret = true;
+
+    // 文件类型
+    const QString fileNameExt = Utils::getFileExtName(filePath);
+    const QString fileName = Utils::getFileName(filePath).replace(fileNameExt, "");
+    ret = mFileTypes.contains(fileNameExt);
+    TASK_SCAN_LOG_INFO << "文件类型: " << ret << " (" << fileNameExt << ")";
+    C_RETURN_VAL_IF_FAIL(ret, false);
+
+    // 文件名称
+    ret = mFileNames.contains(fileName);
+    TASK_SCAN_LOG_INFO << "文件类型: " << ret << " (" << fileName << ")";
+    C_RETURN_VAL_IF_FAIL(ret, false);
+
+    // 文件大小
+    const QFileInfo fi(filePath);
+    const qint64 fileSize = fi.size();
+    ret = (fileSize >= mMinFileSize && fileSize <= mMaxFileSize);
+    TASK_SCAN_LOG_INFO << "文件大小: " << ret << " (" << mMinFileSize << " -- " << fileSize << " -- " << mMaxFileSize << ")";
+    C_RETURN_VAL_IF_FAIL(ret, false);
+
+    // 创建时间
+    const qint64 fileCreateTime = fi.fileTime(QFileDevice::FileBirthTime).toMSecsSinceEpoch();
+    ret = (fileCreateTime >= mCreateTimeStart && fileCreateTime <= mCreateTimeEnd);
+    TASK_SCAN_LOG_INFO << "文件创建: " << ret << " (" << mCreateTimeStart << " -- " << fileCreateTime << " -- " << mCreateTimeEnd << ")";
+    C_RETURN_VAL_IF_FAIL(ret, false);
+
+    // 修改时间
+    const qint64 fileModifyTime = fi.fileTime(QFileDevice::FileModificationTime).toMSecsSinceEpoch();
+    ret = (fileModifyTime >= mModifyTimeStart && fileModifyTime <= mModifyTimeEnd);
+    TASK_SCAN_LOG_INFO << "文件修改: " << ret << " (" << mModifyTimeStart << " -- " << fileModifyTime << " -- " << mModifyTimeEnd << ")";
+    C_RETURN_VAL_IF_FAIL(ret, false);
+
+    // 详细信息
+    {
+
+    }
+    C_RETURN_VAL_IF_FAIL(ret, false);
+
+#undef TASK_SCAN_LOG_INFO
+
+    return ret;
 }
 
 void FileTypeRule::setModifyTimes(const QString & start, const QString & end)

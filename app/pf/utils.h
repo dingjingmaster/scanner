@@ -14,6 +14,7 @@ public:
     static qint64 getFileSize(const QString& path);
     static QString formatPath(const QString& path);
     static QString getFileMD5(const QString& path);
+    static QString getFileName(const QString& filePath);
     static QString simpleToTradition(const QString& str);
     static QString getFileExtName(const QString& filePath);
 

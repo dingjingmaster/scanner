@@ -130,6 +130,12 @@ QString Utils::getFileMD5(const QString & filePath)
     return "";
 }
 
+QString Utils::getFileName(const QString& filePath)
+{
+    const auto arr = filePath.split("/");
+    return arr.last();
+}
+
 QString Utils::simpleToTradition(const QString& str)
 {
     const opencc::SimpleConverter cov("s2t.json");
@@ -141,8 +147,7 @@ QString Utils::getFileExtName(const QString& filePath)
 {
     initFileExtName();
 
-    const auto arr = filePath.split("/");
-    const auto& name = arr.last();
+    const auto& name = Utils::getFileName(filePath);
     QStringList extArr = name.split(".");
     extArr.pop_front();
     QString extName = QString(".%1").arg(extArr.join("."));
