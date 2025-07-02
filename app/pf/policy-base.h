@@ -159,14 +159,15 @@ class RegexpRule final : public RuleBase
 public:
     explicit RegexpRule(const QString &id);
 
-    bool getWildcard() const;
-    bool getIgnoreCase() const;
-    bool getIgnoreZhTw() const;
-    bool getIgnoreConfuse() const;
+    // bool getWildcard() const;
+    // bool getIgnoreCase() const;
+    // bool getIgnoreZhTw() const;
+    // bool getIgnoreConfuse() const;
     qint64 getMinMatchCount() const;
     qint64 getCurrentMatchCount() const;
     RecognitionMode getRecognitionMode() const;
     int getWightByRegex (const QString &regex) const;
+    bool getIsPreciseSearch() const;
 
     void parseRule(const QJsonValue& rule) override;
     bool matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath) override;
@@ -175,20 +176,23 @@ private:
     void addCurrentMatchCount(qint64 c=1);
     void setMinMatchCount(qint64 c);
     void setRecognitionMode(int m);
-    void setWildcard(bool c);
-    void setIgnoreZhTw(bool c);
-    void setIgnoreConfuse(bool c);
-    void setIgnoreCase(bool ignoreCase);
+    // void setWildcard(bool c);
+    // void setIgnoreZhTw(bool c);
+    // void setIgnoreConfuse(bool c);
+    // void setIgnoreCase(bool ignoreCase);
+    void setIsPreciseSearch(bool p);
     void setRegexAndWeight(const QString &regex, int wight);
 
 private:
     QMap<QString, int>                          mRegexAndWeight;            // keyword + wight
 
     // 属性
-    bool                                        mIgnoreCase = false;        // 忽略大小写
-    bool                                        mIgnoreConfuse = false;     // 支持恶意混淆
-    bool                                        mIgnoreZhTw = false;        // 忽略中文简体、繁体
-    bool                                        mWildcard = false;          // 支持通配符
+    bool                                        mIsPreciseSearch = false;   // 精确查找
+
+    // bool                                        mIgnoreCase = false;        // 忽略大小写
+    // bool                                        mIgnoreConfuse = false;     // 支持恶意混淆
+    // bool                                        mIgnoreZhTw = false;        // 忽略中文简体、繁体
+    // bool                                        mWildcard = false;          // 支持通配符
 
     // 匹配模式
     enum RecognitionMode                        mMode;

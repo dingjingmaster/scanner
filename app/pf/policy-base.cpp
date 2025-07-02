@@ -423,13 +423,18 @@ void RegexpRule::setRegexAndWeight(const QString & regex, int weight)
     }
 }
 
-int RegexpRule::getWightByRegex(const QString & regex) const
+int RegexpRule::getWightByRegex(const QString &regex) const
 {
     if (mRegexAndWeight.contains(regex)) {
         return mRegexAndWeight[regex];
     }
 
     return 0;
+}
+
+bool RegexpRule::getIsPreciseSearch() const
+{
+    return mIsPreciseSearch;
 }
 
 void RegexpRule::parseRule(const QJsonValue & rule)
@@ -440,10 +445,10 @@ void RegexpRule::parseRule(const QJsonValue & rule)
 
     C_RETURN_IF_OK(ruleParam.isEmpty() || ruleAttrDto.isEmpty() || clueItemDataList.isEmpty());
 
-    const bool ignoreCase = ruleParam["ignoreCase"].toBool();
-    const bool ignoreConfuse = ruleParam["ignoreConfuse"].toBool();
-    const bool wildcard = ruleParam["wildcard"].toBool();
-    const bool ignoreZhTw = ruleParam["ignoreZhTw"].toBool();
+    // const bool ignoreCase = ruleParam["ignoreCase"].toBool();
+    // const bool ignoreConfuse = ruleParam["ignoreConfuse"].toBool();
+    // const bool wildcard = ruleParam["wildcard"].toBool();
+    // const bool ignoreZhTw = ruleParam["ignoreZhTw"].toBool();
     const int wightFlag = ruleParam["wightFlag"].toInt();
     const int minMatchItems = ruleParam["minMatchItems"].toInt();
     const int minMatchItemsScore = ruleParam["minMatchItemsScore"].toInt();
@@ -457,10 +462,10 @@ void RegexpRule::parseRule(const QJsonValue & rule)
 #endif
 
     setExactMatch(exactMatch);
-    setWildcard(wildcard);
-    setIgnoreCase(ignoreCase);
-    setIgnoreConfuse(ignoreConfuse);
-    setIgnoreZhTw(ignoreZhTw);
+    // setWildcard(wildcard);
+    // setIgnoreCase(ignoreCase);
+    // setIgnoreConfuse(ignoreConfuse);
+    // setIgnoreZhTw(ignoreZhTw);
     setRecognitionMode(wightFlag);
 
     if (getRecognitionMode() == RuleBase::RecognitionTimes) {
@@ -478,9 +483,94 @@ void RegexpRule::parseRule(const QJsonValue & rule)
 
 bool RegexpRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
-    return RuleBase::matchRule(filePath, metaPath, ctxPath);
+#define TASK_SCAN_LOG_INFO       qInfo() \
+    << "[正则规则]" \
+    << "[精确查找: " << mIsPreciseSearch \
+    << " 最小匹配个数: " << getMinMatchCount() \
+    << "] "
+
+    bool ret = false;
+    C_RETURN_VAL_IF_FAIL(QFile::exists(filePath) && QFile::exists(metaPath) && QFile::exists(ctxPath), ret);
+
+    QFile file(filePath);
+    C_RETURN_VAL_IF_FAIL(file.open(QIODevice::ReadOnly | QIODevice::Text), false);
+
+#if 0
+    auto regSpecialChar = [=] (const QString& str) -> QString {
+        // TODO:// 后续优化性能
+        QString str0 = str;
+        QString str1 = str0.replace("\\", "\\\\");
+        QString str2 = str1.replace("|", "\\|");
+        QString str3 = str2.replace("(", "\\(");
+        QString str4 = str3.replace(")", "\\)");
+        QString str5 = str4.replace("[", "\\[");
+        QString str6 = str5.replace("]", "\\]");
+        QString str7 = str6.replace("$", "\\$");
+        QString str8 = str7.replace("*", "\\*");
+        QString str9 = str8.replace("+", "\\+");
+        QString str10 = str9.replace(".", "\\.");
+        QString str11 = str10.replace("?", "\\?");
+        QString str12 = str11.replace("^", "\\^");
+        QString str13 = str12.replace("{", "\\{");
+        QString str14 = str13.replace("}", "\\}");
+        return str14;
+    };
+#endif
+
+    auto getContent = [=] (const RegexMatcher& rm) -> QString {
+        auto iter = rm.getResultIterator();
+        while (iter.hasNext()) {
+            auto kv = iter.next();
+            if (!kv.first.isEmpty() && !kv.second.isEmpty()) {
+                return QString("%1{]%2").arg(kv.first).arg(kv.second);
+            }
+        }
+        return "";
+    };
+
+    qint64 score = 0;
+    qint64 timesScore = 0;
+    // QMap<QString, qint64> score;
+    for (auto kv = mRegexAndWeight.begin(); kv != mRegexAndWeight.end(); ++kv) {
+        RegexMatcher rm (kv.key());
+        timesScore += ((rm.getMatchedCount() >= kv.value()) ? 1 : 0);
+        score += (kv.value() * rm.getMatchedCount());
+        // TODO:// 保存上下文
+    }
+    file.close();
+
+    // 权重类型
+    if (RecognitionScore == mMode) {
+        if (score >= getMinMatchCount()) {
+            TASK_SCAN_LOG_INFO << "[积分权重] matched count: " << score << " greater then mini count: " << getMinMatchCount();
+            // FIXME:// 多保存几个上下文？每个关键词一个？
+            // saveResult(filePath, metaPath, getContent(rm));
+            ret = true;
+        }
+    }
+    else if (RecognitionTimes == mMode) {
+        if (timesScore >= getMinMatchCount()) {
+            TASK_SCAN_LOG_INFO << "[次数权重] matched count: " << timesScore << " greater then mini count: " << getMinMatchCount();
+            // FIXME:// 多保存几个上下文？每个关键词一个？
+            // saveResult(filePath, metaPath, getContent(rm));
+            ret = true;
+        }
+    }
+    else {
+        if (timesScore >= getMinMatchCount()) {
+            TASK_SCAN_LOG_INFO << "[关闭权重]matched count: " << timesScore << " greater then mini count: " << getMinMatchCount();
+            // FIXME:// 多保存几个上下文？每个关键词一个？
+            // saveResult(filePath, metaPath, getContent(rm));
+            ret = true;
+        }
+    }
+
+#undef TASK_SCAN_LOG_INFO
+
+    return ret;
 }
 
+#if 0
 void RegexpRule::setIgnoreCase(bool ignoreCase)
 {
     mIgnoreCase = ignoreCase;
@@ -521,9 +611,13 @@ bool RegexpRule::getWildcard() const
     return mWildcard;
 }
 
-void RegexpRule::setRecognitionMode(int m)
+#endif
+
+
+void RegexpRule::setRecognitionMode(int m) { mMode = (RecognitionMode)m; }
+void RegexpRule::setIsPreciseSearch(bool p)
 {
-    mMode = (RecognitionMode) m;
+    mIsPreciseSearch = p;
 }
 
 RuleBase::RecognitionMode RegexpRule::getRecognitionMode() const
