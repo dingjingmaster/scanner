@@ -263,7 +263,7 @@ bool FileTypeRule::matchRule(const QString& filePath, const QString& metaPath, c
 #define TASK_SCAN_LOG_INFO       qInfo() \
     << "[文件类型]"
 
-    C_RETURN_VAL_IF_FAIL(QFile::exists(filePath) && QFile::exists(metaPath) && QFile::exists(ctxPath), ret);
+    C_RETURN_VAL_IF_FAIL(QFile::exists(filePath) && QFile::exists(metaPath) && QFile::exists(ctxPath), false);
 
     QFile file(filePath);
     C_RETURN_VAL_IF_FAIL(file.open(QIODevice::ReadOnly | QIODevice::Text), false);
