@@ -666,7 +666,11 @@ bool RegexpRule::getWildcard() const
 #endif
 
 
-void RegexpRule::setRecognitionMode(int m) { mMode = (RecognitionMode)m; }
+void RegexpRule::setRecognitionMode(int m)
+{
+    mMode = (RecognitionMode)m;
+}
+
 void RegexpRule::setIsPreciseSearch(bool p)
 {
     mIsPreciseSearch = p;
@@ -724,12 +728,12 @@ int KeywordRule::getWightByKeyword(const QString & keyword) const
 bool KeywordRule::matchRule(const QString& filePath, const QString& metaPath, const QString& ctxPath)
 {
 #define TASK_SCAN_LOG_INFO       qInfo() \
-    << "[KeywordRule]" \
-    << "[ignore case: " << mIgnoreCase \
-    << " zhTw: " << mIgnoreZhTw \
-    << " ignore confuse: " << mIgnoreConfuse \
+    << "[关键词规则]" \
+    << "[忽略大小写: " << mIgnoreCase \
+    << " 忽略简体/繁体: " << mIgnoreZhTw \
+    << " 支持恶意混淆: " << mIgnoreConfuse \
     << " wildcard: " << mWildcard \
-    << " mincount: " << getMinMatchCount() \
+    << " 最小匹配数: " << getMinMatchCount() \
     << "] "
 
     bool ret = false;
