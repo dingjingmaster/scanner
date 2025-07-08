@@ -4,6 +4,7 @@
 
 #ifndef andsec_scanner_TASK_BASE_H
 #define andsec_scanner_TASK_BASE_H
+#include <QMutex>
 #include <QRunnable>
 
 #include "policy-base.h"
@@ -21,7 +22,6 @@ enum class ScanTaskStatus
 {
     UnStarted,
     Running,
-    Stop,
     Stopped,
     Finished,
     Paused,
@@ -33,6 +33,16 @@ enum class TaskScanMode
     TaskScanNoDisturbMode,
     TaskScanNormalMode,
     TaskScanFastMode
+};
+
+enum class ScanStatus
+{
+    SCAN_TASK_NO_LAUNCH = 0,                    // 初始状态
+    SCAN_TASK_SCANNING,                         // 扫描中
+    SCAN_TASK_STOP,                             // 停止
+    SCAN_TASK_OVER,                             // 扫描完成
+    SCAN_TASK_ERROR,                            // 异常
+    SCAN_TASK_SUSPEND,                          // 暂停状态
 };
 
 class TaskBase : public QRunnable
@@ -61,12 +71,20 @@ class ScanTask final : public TaskBase
 public:
     explicit ScanTask(const QString& taskId, const QString& taskName);
 
+    qint64 getScannedFileNum () const;
+    void setScannedFileNum (qint64 fileNum);
+
+    qint64 getTotalFileNum () const;
+    void setTotalFileNum (qint64 fileNum);
+
+    int getTimes() const;
     int getProgressRate() const;
     int getAttachmentReport() const;
     TaskScanMode getTaskScanMode() const;
     ScanTaskStatus getTaskStatus() const;
     int getTaskStatusInt() const;
     int getTaskScanModeInt() const;
+    bool getIsScheduled() const;
     void parseRules(const QJsonArray& arr);
     QString getTaskScanPathStr() const;
     QString getPolicyIdListStr() const;
@@ -79,13 +97,30 @@ public:
     const QSet<QString>& getBypassFileType() const;
     const QSet<QString>& getTaskBypassPath() const;
 
-    void stop();
+    bool checkNeedRun() const;
+
+    void errorRun();                            // 出错
+    void initRun() const;                       // 初始运行
+    void progress() const;                      // 记录进度
+    void stopRun();                             // 停止运行
+    void pauseRun();                            // 暂停任务
+    void startRun();                            // 开始运行
+    void finishedRun();                         // 扫描完成
+
+
+    static qint64 getScannedFileNum(const QString& taskId);
+    static qint64 getTotalFileNum(const QString& taskId);
+    static int getTimes(const QString& taskId);
+    static bool getIsScheduled(const QString& taskId);
+
     void run() override;
 
 // private:
+    void setTimes(int times);
     void setProgressRate(int rate);
     void setTaskScanMode (int mode);
     void setAttachmentReport(int size);
+    void setIsScheduled(bool isScheduled);
     void setTaskScanMode (TaskScanMode mode);
     void setTaskStatus(ScanTaskStatus taskStatus);
     void setTaskStatus(const QString& taskStatus);
@@ -98,8 +133,7 @@ public:
 private:
     void scanFiles();
     void taskFinished();
-    // QString getTaskTmpMd5(const QString& filePath) const;
-    void pop100File(QStringList& fileMap) const;
+    void pop100File(QStringList& fileMap);
     void update100FileStatus(QStringList& fileMap);
     QPair<QString, QString> getScanFileResult (const QString& filePath);
     void fileScanFinished(const QString& path, const QString& md5, bool isHit, const QList<QString>& ctx);
@@ -109,8 +143,10 @@ private:
 
 private:
     bool                                            mFinishedOneTime = false;
-    int                                             mTotalNum;
-    int                                             mFinishedNum;
+    int                                             mTimes;
+    bool                                            mIsScheduled;
+    qint64                                          mTotalNum;
+    qint64                                          mFinishedNum;
     std::atomic_bool                                mIsRunning;
     int                                             mAttachmentReport;      // 附件上报 MB
     int                                             mProgressRate;

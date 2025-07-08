@@ -15,7 +15,7 @@
 #include <pthread.h>
 
 #include "data-base.h"
-#include "task-base.h"
+#include "gen-event.h"
 #include "macros/macros.h"
 
 typedef struct _ThreadPool      ThreadPool;
@@ -56,7 +56,7 @@ private:
 TaskManagerPrivate::TaskManagerPrivate(TaskManager * q)
     : q_ptr(q)
 {
-    mScanTaskThreadPool.setMaxThreadCount(1);
+    mScanTaskThreadPool.setMaxThreadCount(100);
 }
 
 bool TaskManagerPrivate::parseScanTask(const QString & scanTask)
@@ -96,6 +96,7 @@ bool TaskManagerPrivate::parseScanTask(const QString & scanTask)
 
                 if (!taskId.isEmpty() && !taskName.isEmpty()) {
                     const auto scanTaskPtr = std::make_shared<ScanTask>(taskId, taskName);
+                    scanTaskPtr->setTimes(times);
                     scanTaskPtr->setTaskStatus(taskStatus);
                     scanTaskPtr->setUseOCR(taskOCRFlag);
                     scanTaskPtr->setFileTypeList(fileTypeList);
@@ -111,7 +112,9 @@ bool TaskManagerPrivate::parseScanTask(const QString & scanTask)
                     DataBase::getInstance().insertTask(taskId, taskName,
                         scanTaskPtr->getTaskScanPathStr(), scanTaskPtr->getTaskBypassPathStr(),
                         scanTaskPtr->getFileTypeListStr(), scanTaskPtr->getBypassFileTypeStr(),
-                        scanTaskPtr->getTaskStatusInt(), scanTaskPtr->getTaskScanModeInt());
+                        schedulingCron, policyIdList.split(","),
+                        scanTaskPtr->getTaskStatusInt(), scanTaskPtr->getTaskScanModeInt(),
+                        times, schedulingMechanism.toLower() == "schedule");
                     return true;
                 }
             }
@@ -157,11 +160,24 @@ std::shared_ptr<ScanTask> TaskManagerPrivate::getScanTask(const QString & scanTa
 void TaskManagerPrivate::removeScanTask(const QString & scanTaskId)
 {
     mScanTasks.remove(scanTaskId);
+
+    GenEvent::getInstance().genScanProgress(scanTaskId, GenEvent::SCAN_TASK_STOP,
+            ScanTask::getScannedFileNum(scanTaskId), ScanTask::getTotalFileNum(scanTaskId),
+            ScanTask::getTimes(scanTaskId), ScanTask::getIsScheduled(scanTaskId),
+            DataBase::getInstance().getExecTimes(scanTaskId));
+
+    DataBase::getInstance().deleteTask(scanTaskId);
 }
 
 TaskManager* TaskManager::getInstance()
 {
     return &gInstance;
+}
+
+std::shared_ptr<TaskBase> TaskManager::getTaskById(const QString& id)
+{
+    Q_D(TaskManager);
+    return d->getScanTask(id);
 }
 
 bool TaskManager::parseScanTask(const QString & scanTask)
@@ -183,8 +199,16 @@ void TaskManager::startScanTask(const QString& scanTaskId)
     Q_D(TaskManager);
 
     const auto scanTask = d->getScanTask(scanTaskId);
-    if (scanTask) {
-        d->mScanTaskThreadPool.start(scanTask.get());
+
+    startScanTask(scanTask);
+}
+
+void TaskManager::startScanTask(std::shared_ptr<TaskBase> task)
+{
+    Q_D(TaskManager);
+
+    if (task.get()) {
+        d->mScanTaskThreadPool.start(task.get());
     }
 }
 
@@ -195,13 +219,38 @@ QString TaskManager::getTaskIdByPolicyFile(const QString & policyFile)
     return taskId.replace("scan-task-", "");
 }
 
+void TaskManager::startRunTaskAll()
+{
+    Q_D(TaskManager);
+
+    for (auto it = d->mScanTasks.keyValueBegin(); it != d->mScanTasks.keyValueEnd(); ++it) {
+        qInfo() << "Schedule Task: " << it->first;
+        if (it->second->checkNeedRun()) {
+            startScanTask(it->second);
+        }
+        else {
+            qInfo() << "Task: " << it->first << " Not Need Run!";
+        }
+    }
+}
+
 void TaskManager::stopScanTask(const QString & scanTaskId)
 {
     Q_D(TaskManager);
 
     const auto scanTask = d->getScanTask(scanTaskId);
     if (scanTask) {
-        scanTask->stop();
+        scanTask->stopRun();
+    }
+}
+
+void TaskManager::pauseScanTask(const QString& scanTaskId)
+{
+    Q_D(TaskManager);
+
+    const auto scanTask = d->getScanTask(scanTaskId);
+    if (scanTask) {
+        scanTask->pauseRun();
     }
 }
 

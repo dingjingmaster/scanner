@@ -5,6 +5,7 @@
 #ifndef andsec_scanner_TASK_MANAGER_H
 #define andsec_scanner_TASK_MANAGER_H
 #include <QObject>
+#include "task-base.h"
 
 
 class TaskManagerPrivate;
@@ -17,12 +18,18 @@ public:
     TaskManager(const TaskManager&) = delete;
     TaskManager& operator=(const TaskManager&) = delete;
 
+    std::shared_ptr<TaskBase> getTaskById(const QString& id);
+
     bool parseScanTask(const QString &scanTask);
     QString parseTaskId(const QString &scanTask);
-    void stopScanTask(const QString &scanTaskId);
     void removeScanTask(const QString &scanTaskId);
-    void startScanTask(const QString &scanTaskId);
+    void startScanTask(std::shared_ptr<TaskBase> task);
     static QString getTaskIdByPolicyFile(const QString & policyFile);
+
+    void startRunTaskAll();
+    void startScanTask(const QString &scanTaskId);
+    void stopScanTask(const QString &scanTaskId);
+    void pauseScanTask(const QString &scanTaskId);
 
 private:
     TaskManager();

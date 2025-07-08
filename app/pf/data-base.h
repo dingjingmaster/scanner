@@ -27,10 +27,16 @@ public:
      */
     void initDB() const;
 
+    bool checkTaskExists(const QString& taskId) const;
+
     void insertTask(const QString& taskId, const QString& taskName,
                     const QString& scanDir, const QString& scanDirExp,
                     const QString& scanExt, const QString& scanExtExp,
-                    int taskStatus, int scanMode) const;
+                    const QString& schedulingCron,
+                    const QStringList& policyId,
+                    int taskStatus, int scanMode,
+                    int times,
+                    bool isScheduled=false) const;
     void updateTotalFile(const QString& taskId, qint64 totalFile) const;
     void updateFinishedFile(const QString& taskId, qint64 finishedFile) const;
     void updateFinishedFileAdd(const QString& taskId, qint64 finishedFile) const;
@@ -41,8 +47,21 @@ public:
     void updateTaskStatusStopped(const QString& taskId) const;
     void updateTaskStatusFinished(const QString& taskId) const;
 
+    // scan_task
+    qint64 getFinishedFileNum(const QString& taskId) const;
+    qint64 getTotalFileNum(const QString& taskId) const;
+    bool getIsScheduled(const QString& taskId) const;
+
+    // 获取所有TaskId
+    QStringList queryTaskIds() const;
+    int getExecTimes(const QString& taskId) const;
+
+    // 删除扫描任务，标记已经删除的任务Id
+    void deleteTask(const QString& taskId) const;
+
     // 保存 rule_id
     void updateRuleId (const QString& ruleId) const;
+    void updateRuleIdDirty (const QString& ruleId) const;
     bool checkRuleIdExists(const QString& ruleId) const;
     void showRuleId () const;
 
@@ -60,14 +79,10 @@ public:
     void saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files) const;
     void loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned) const;
     void updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned) const;
-    // bool get100FileByTaskId(const QString& taskId, QMap<QString, QString>& files) const;
 
     // task table
     void createPolicyIdTable() const;
     QString getTaskFileMd5(const QString& taskId, const QString& filePath) const; // 获取已保存的md5, 根据结果中的策略id检查是否无须扫描
-    // bool checkTaskTableFileExists(const QString& taskId, const QString& filePath) const;
-    // void insertTaskTable(const QString& taskId, const QString& filePath, const QString& md5) const;
-    // void updateTaskTable(const QString& taskId, const QString& filePath, const QString& md5, bool isFinished) const;
 
 private:
     explicit DataBase(QObject *parent = nullptr);

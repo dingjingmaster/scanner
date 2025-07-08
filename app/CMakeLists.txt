@@ -1,4 +1,6 @@
 add_executable(andsec-scanner main.cpp
+        pf/ipc.cc pf/ipc.h
+
         pf/utils.cc pf/utils.h
         pf/data-base.cc pf/data-base.h
         pf/task-base.cpp pf/task-base.h
@@ -6,6 +8,8 @@ add_executable(andsec-scanner main.cpp
         pf/task-manager.cpp pf/task-manager.h
         pf/policy-filter.cc pf/policy-filter.h
         pf/general-setting.cc pf/general-setting.h
+
+        pf/gen-event.cc pf/gen-event.h
 
         tika-wrap/src/java-env.cpp tika-wrap/src/java-env.h
 

@@ -10,6 +10,7 @@
 
 #include "utils.h"
 #include "data-base.h"
+#include "gen-event.h"
 #include "task-manager.h"
 #include "../macros/macros.h"
 
@@ -24,38 +25,73 @@ PolicyFilter::PolicyFilter(int argc, char ** argv)
      * @TODO:// 是否把定时器修改为IPC机制，这样节省性能
      */
     connect(mTimer, &QTimer::timeout, this, [this]() {
+        QString taskId;
+        bool hasError = false;
+        bool isUpdateTask = false;
         const auto dirs = mPolicyDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
         for (const auto &f : dirs) {
             if (f.startsWith("scan-task-")) {
                 QString policyFile = Utils::formatPath(QString("%1/%2")
                     .arg(mPolicyDir.absolutePath()).arg(f));
-
-                // TODO://如果是空文件，则删除此任务相关的所有数据
-
+                taskId = TaskManager::getInstance()->parseTaskId(policyFile);
                 if (checkFileNeedParse(policyFile)) {
+                    qInfo() << "need parse!";
+                    isUpdateTask = true;
                     if (TaskManager::getInstance()->parseScanTask(policyFile)) {
-                        // TODO:// 换个地方保存???
+                        auto task = TaskManager::getInstance()->getTaskById(taskId);
+                        auto scanTask = dynamic_cast<ScanTask*>(task.get());
+                        scanTask->initRun();
                         updatePolicyFile(policyFile);
                         qInfo() << "Success parse scan task: " << policyFile;
-                        TaskManager::getInstance()->startScanTask(TaskManager::getInstance()->parseTaskId(policyFile));
                     }
                     else {
+                        hasError = true;
                         qCritical() << "Failed to parse scan task: " << policyFile;
                     }
                 }
+                else {
+                    hasError = true;
+                    qCritical() << "Failed to parse scan task: " << policyFile;
+                }
             }
             else {
+                hasError = true;
                 qWarning() << "Unrecognized policy file: " << f;
             }
         }
 
-        // TODO://删除不需要的任务，后续如果下发内容改变，则清空旧的文件，此处解析到后要删除旧任务相关数据
-        for (const auto &f : mPolicyFile.keys()) {
-            if (!QFile::exists(f)) {
-                TaskManager::getInstance()->stopScanTask(TaskManager::getTaskIdByPolicyFile(f));
-                TaskManager::getInstance()->removeScanTask(TaskManager::getTaskIdByPolicyFile(f));
+        if (isUpdateTask && !taskId.isEmpty()) {
+            auto ids = DataBase::getInstance().queryTaskIds();
+            for (auto& id : ids) {
+                if (id.isEmpty() || id.isNull()) { continue; }
+                if (id == taskId) {
+                    qInfo () << "Current task id: " << id;
+                    continue;
+                }
+                qInfo() << "DEL old task: " << id;
+                auto task = TaskManager::getInstance()->getTaskById(taskId);
+                auto scanTask = dynamic_cast<ScanTask*>(task.get());
+                scanTask->stopRun();
+                TaskManager::getInstance()->removeScanTask(id);
             }
         }
+
+        // 处理错误数据
+        if (hasError) {
+            auto ids = DataBase::getInstance().queryTaskIds();
+            for (auto& id : ids) {
+                if (id.isEmpty() || id.isNull()) { continue; }
+                if (id == taskId) {
+                    qInfo () << "Current task id: " << id;
+                    continue;
+                }
+                qInfo() << "DEL old task: " << id;
+                TaskManager::getInstance()->removeScanTask(id);
+            }
+        }
+
+        // 开始运行
+        TaskManager::getInstance()->startRunTaskAll();
     });
     mTimer->setInterval(1000 * 5);
 }
