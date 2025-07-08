@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QDebug>
 #include <QCryptographicHash>
+#include <QJsonDocument>
 
 #include "utils.h"
 #include "data-base.h"
@@ -25,68 +26,36 @@ PolicyFilter::PolicyFilter(int argc, char ** argv)
      * @TODO:// 是否把定时器修改为IPC机制，这样节省性能
      */
     connect(mTimer, &QTimer::timeout, this, [this]() {
-        QString taskId;
-        bool hasError = false;
-        bool isUpdateTask = false;
         const auto dirs = mPolicyDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
         for (const auto &f : dirs) {
             if (f.startsWith("scan-task-")) {
                 QString policyFile = Utils::formatPath(QString("%1/%2")
                     .arg(mPolicyDir.absolutePath()).arg(f));
-                taskId = TaskManager::getInstance()->parseTaskId(policyFile);
                 if (checkFileNeedParse(policyFile)) {
                     qInfo() << "need parse!";
-                    isUpdateTask = true;
                     if (TaskManager::getInstance()->parseScanTask(policyFile)) {
-                        auto task = TaskManager::getInstance()->getTaskById(taskId);
-                        auto scanTask = dynamic_cast<ScanTask*>(task.get());
-                        scanTask->initRun();
-                        updatePolicyFile(policyFile);
                         qInfo() << "Success parse scan task: " << policyFile;
                     }
                     else {
-                        hasError = true;
                         qCritical() << "Failed to parse scan task: " << policyFile;
                     }
                 }
                 else {
-                    hasError = true;
-                    qCritical() << "Failed to parse scan task: " << policyFile;
+                    qCritical() << "Not need to parse scan task: " << policyFile;
                 }
-            }
-            else {
-                hasError = true;
-                qWarning() << "Unrecognized policy file: " << f;
-            }
-        }
-
-        if (isUpdateTask && !taskId.isEmpty()) {
-            auto ids = DataBase::getInstance().queryTaskIds();
-            for (auto& id : ids) {
-                if (id.isEmpty() || id.isNull()) { continue; }
-                if (id == taskId) {
-                    qInfo () << "Current task id: " << id;
-                    continue;
-                }
-                qInfo() << "DEL old task: " << id;
-                auto task = TaskManager::getInstance()->getTaskById(taskId);
-                auto scanTask = dynamic_cast<ScanTask*>(task.get());
-                scanTask->stopRun();
-                TaskManager::getInstance()->removeScanTask(id);
             }
         }
 
         // 处理错误数据
-        if (hasError) {
+        {
             auto ids = DataBase::getInstance().queryTaskIds();
             for (auto& id : ids) {
                 if (id.isEmpty() || id.isNull()) { continue; }
-                if (id == taskId) {
-                    qInfo () << "Current task id: " << id;
-                    continue;
+                // 判断是否是当前的扫描任务
+                if (!TaskManager::getInstance()->isValidScanTaskId(id)) {
+                    qInfo() << "DEL old task: " << id;
+                    TaskManager::getInstance()->removeScanTask(id);
                 }
-                qInfo() << "DEL old task: " << id;
-                TaskManager::getInstance()->removeScanTask(id);
             }
         }
 
@@ -105,18 +74,39 @@ bool PolicyFilter::checkFileNeedParse(const QString & filePath) const
 {
     C_RETURN_VAL_IF_OK(filePath.isNull() || filePath.isEmpty(), false);
 
-    if (mPolicyFile.contains(filePath)) {
-        const QString md5 = Utils::getFileMD5(filePath);
-        C_RETURN_VAL_IF_OK(md5.isEmpty() || mPolicyFile[filePath] == md5, false);
+    QFile file(filePath);
+    if (file.open(QIODevice::ReadOnly)) {
+        const auto json = QJsonDocument::fromJson(file.readAll());
+        file.close();
+
+        const auto dataTask = json["dataDiscoveryTask"];
+        if (!dataTask.isNull()) {
+            const auto dlpContentDataList = json["dlpContentDataList"];
+            if (!dlpContentDataList.isNull()) {
+                const auto taskId = dataTask["taskId"].toString();
+                const auto times = dataTask["times"].toInt();
+                const auto dbTimes = DataBase::getInstance().getTimes(taskId);
+                auto task = TaskManager::getInstance()->getTaskById(taskId);
+                C_RETURN_VAL_IF_FAIL(task, true);
+                auto scanTask = dynamic_cast<ScanTask*>(task.get());
+                C_RETURN_VAL_IF_FAIL(scanTask, true);
+                qInfo() << "times: " << times << ", taskId: " << taskId << ", times: " << scanTask->getTimes() << ", dbTimes: " << dbTimes;
+                if (times != dbTimes) {
+                    scanTask->setTimes(times);
+                    scanTask->taskForceReload();
+                    return true;
+                }
+            }
+        }
     }
 
-    return true;
+    return false;
 }
 
-void PolicyFilter::updatePolicyFile(const QString & filePath)
+void PolicyFilter::updatePolicyFile(const QString & filePath, const QString & md5)
 {
     C_RETURN_IF_OK(filePath.isNull() || filePath.isEmpty());
 
-    mPolicyFile[filePath] = Utils::getFileMD5(filePath);
+    mPolicyFile[filePath] = md5;
 }
 

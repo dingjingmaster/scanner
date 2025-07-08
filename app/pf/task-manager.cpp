@@ -115,6 +115,7 @@ bool TaskManagerPrivate::parseScanTask(const QString & scanTask)
                         schedulingCron, policyIdList.split(","),
                         scanTaskPtr->getTaskStatusInt(), scanTaskPtr->getTaskScanModeInt(),
                         times, schedulingMechanism.toLower() == "schedule");
+                    scanTaskPtr->setParseOK();
                     return true;
                 }
             }
@@ -174,6 +175,12 @@ TaskManager* TaskManager::getInstance()
     return &gInstance;
 }
 
+bool TaskManager::isValidScanTaskId(const QString& scanTaskId)
+{
+    Q_D(TaskManager);
+    return d->mScanTasks.contains(scanTaskId);
+}
+
 std::shared_ptr<TaskBase> TaskManager::getTaskById(const QString& id)
 {
     Q_D(TaskManager);
@@ -208,6 +215,7 @@ void TaskManager::startScanTask(std::shared_ptr<TaskBase> task)
     Q_D(TaskManager);
 
     if (task.get()) {
+        qInfo() << "Start scan task:" << task->getTaskId();
         d->mScanTaskThreadPool.start(task.get());
     }
 }
@@ -217,6 +225,21 @@ QString TaskManager::getTaskIdByPolicyFile(const QString & policyFile)
     QString taskId = policyFile.split("/").last();
 
     return taskId.replace("scan-task-", "");
+}
+
+void TaskManager::checkAllTask()
+{
+    Q_D(TaskManager);
+
+    for (auto it = d->mScanTasks.keyValueBegin(); it != d->mScanTasks.keyValueEnd(); ++it) {
+        qInfo() << "Schedule Task: " << it->first;
+        if (it->second->checkNeedRun()) {
+            startScanTask(it->second);
+        }
+        else {
+            qInfo() << "Task: " << it->first << " Not Need Run!";
+        }
+    }
 }
 
 void TaskManager::startRunTaskAll()

@@ -30,6 +30,7 @@
 TaskBase::TaskBase(TaskType tp, const QString & taskId, const QString & taskName)
     : mTaskId(taskId), mTaskName(taskName), mTaskType(tp)
 {
+    setAutoDelete(false);
 }
 
 TaskBase::~TaskBase()
@@ -53,6 +54,21 @@ QString TaskBase::getTaskName() const
 void TaskBase::setUseOCR(int useOCR)
 {
     mIsUseOCR = (useOCR == 1);
+}
+
+void TaskBase::setParseOK()
+{
+    mParseOK = true;
+}
+
+void TaskBase::setParseFail()
+{
+    mParseOK = false;
+}
+
+bool TaskBase::getIsParseOK() const
+{
+    return mParseOK;
 }
 
 bool TaskBase::getUseOCR() const
@@ -144,7 +160,7 @@ int ScanTask::getTaskScanModeInt() const
 
 bool ScanTask::getIsScheduled() const
 {
-    return mIsScheduled;
+    return DataBase::getInstance().getIsScheduled(getTaskId());
 }
 
 void ScanTask::setFileTypeList(const QString & fileTypeList)
@@ -213,16 +229,63 @@ const QSet<QString> & ScanTask::getTaskBypassPath() const
     return mTaskBypassPath;
 }
 
-bool ScanTask::checkNeedRun() const
+bool ScanTask::checkNeedRun()
 {
-    return true;
+    // 普通任务，未初始化、扫描中、未完成，则开始扫描
+    DataBase::TaskStatus taskStatus = DataBase::getInstance().getTaskStatus(getTaskId());
+    if (DataBase::getInstance().getIsScheduled(getTaskId())) {
+        // 调度任务
+    }
+    else {
+        // 普通任务
+        switch (taskStatus) {
+            case DataBase::TASK_STATUS_UNKNOWN: {
+                TASK_SCAN_LOG_INFO << "状态: 未初始化";
+                return true;
+            }
+            case DataBase::TASK_STATUS_RUNNING: {
+                TASK_SCAN_LOG_INFO << "状态: 正在扫描";
+                return true;
+            }
+            case DataBase::TASK_STATUS_PAUSE: {
+                TASK_SCAN_LOG_INFO << "状态: 暂停";
+                break;
+            }
+            case DataBase::TASK_STATUS_FINISHED: {
+                TASK_SCAN_LOG_INFO << "状态: 完成";
+                break;
+            }
+            case DataBase::TASK_STATUS_STOPPED: {
+                TASK_SCAN_LOG_INFO << "状态: 停止";
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    return false;
+}
+
+void ScanTask::taskForceReload() const
+{
+    DataBase::TaskStatus taskStatus = DataBase::getInstance().getTaskStatus(getTaskId());
+    if (!DataBase::getInstance().getIsScheduled(getTaskId())) {
+        if (taskStatus == DataBase::TASK_STATUS_FINISHED || taskStatus == DataBase::TASK_STATUS_STOPPED) {
+            DataBase::getInstance().updateTaskStatusRunning(getTaskId());
+        }
+        DataBase::getInstance().deleteTempTaskFile(getTaskId());
+    }
 }
 
 void ScanTask::errorRun()
 {
     mTaskStatus = ScanTaskStatus::Error;
+    const bool isScheduled = getIsScheduled();
+    const int execTimes = DataBase::getInstance().getExecTimes(getTaskId());
     GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_STOP,
-            getScannedFileNum(), getTotalFileNum(), getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+            getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
 
     qInfo() << "error: " << getTaskId();
 
@@ -232,16 +295,38 @@ void ScanTask::errorRun()
 
 void ScanTask::initRun() const
 {
+    // 获取数据库此 id 是否保存，且当前状态是啥
+    // if (DataBase::getInstance().getIsScheduled(getTaskId())) {
+    //     // 调度任务
+    // }
+    // else {
+    //     // 非调度任务
+    //     if (DataBase::TASK_STATUS_UNKNOWN == DataBase::getInstance().getTaskStatus(getTaskId())) {
+    //         GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_NO_LAUNCH, 0, 0,
+    //             getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+    //     }
+    // }
+
+    // 如果是调度任务：
+    //  1. 时间到了才会执行
+    // 如果是其他任务:
+    //  1.
+
+    ///////////////////////TODO://
     // 初始状态
+    const bool isScheduled = getIsScheduled();
+    const int execTimes = DataBase::getInstance().getExecTimes(getTaskId());
     GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_NO_LAUNCH, 0, 0,
-        getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+        getTimes(), isScheduled, isScheduled ? execTimes : 1);
 }
 
 void ScanTask::progress() const
 {
     // 生成上报事件
+    const bool isScheduled = getIsScheduled();
+    const int execTimes = DataBase::getInstance().getExecTimes(getTaskId());
     GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_SCANNING,
-            getScannedFileNum(), getTotalFileNum(), getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+            getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
 
     // 保存数据库
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
@@ -368,12 +453,12 @@ void ScanTask::scanFiles()
     mTotalNum = mFilesForScan.size() + mFilesScanned.size();
 }
 
-void ScanTask::taskFinished()
-{
-    mTaskStatus = ScanTaskStatus::Finished;
-    DataBase::getInstance().updateTaskStatusFinished(getTaskId());
-    DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
-}
+// void ScanTask::taskFinished()
+// {
+//     mTaskStatus = ScanTaskStatus::Finished;
+//     DataBase::getInstance().updateTaskStatusFinished(getTaskId());
+//     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
+// }
 
 void ScanTask::pop100File(QStringList & fileMap)
 {
@@ -478,10 +563,13 @@ void ScanTask::scanFile(const QString& filePath)
 void ScanTask::stopRun()
 {
     qInfo() << "Task: " << getTaskId() << " stopped!";
+    mIsRunning = false;
     mTaskStatus = ScanTaskStatus::Stopped;
     // 生成上报事件
+    const bool isScheduled = getIsScheduled();
+    const int execTimes = DataBase::getInstance().getExecTimes(getTaskId());
     GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_STOP,
-            getScannedFileNum(), getTotalFileNum(), getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+            getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
 
     // 保存数据库
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
@@ -494,8 +582,10 @@ void ScanTask::pauseRun()
     mTaskStatus = ScanTaskStatus::Paused;
     qInfo() << "Task: " << getTaskId() << " paused!";
     // 生成上报事件
+    const bool isScheduled = getIsScheduled();
+    const int execTimes = DataBase::getInstance().getExecTimes(getTaskId());
     GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_SUSPEND,
-            getScannedFileNum(), getTotalFileNum(), getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+            getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
 
     // 保存数据库
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
@@ -506,12 +596,16 @@ void ScanTask::startRun()
 {
     qInfo() << "Task: " << getTaskId() << " started!";
 
+    // initRun();
+
     mIsRunning = true;
     mTaskStatus = ScanTaskStatus::Running;
 
     // 生成上报事件
+    const bool isScheduled = getIsScheduled();
+    const int execTimes = DataBase::getInstance().getExecTimes(getTaskId());
     GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_SCANNING,
-            getScannedFileNum(), getTotalFileNum(), getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+            getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
 
     // 保存数据库
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
@@ -522,15 +616,31 @@ void ScanTask::finishedRun()
 {
     qInfo() << "Task: " << getTaskId() << " finished!";
 
+    mIsRunning = false;
     mTaskStatus = ScanTaskStatus::Finished;
 
     // 生成上报事件
+    const bool isScheduled = getIsScheduled();
+    const int execTimes = DataBase::getInstance().getExecTimes(getTaskId());
+    GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_SCANNING,
+            getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
+    usleep(300);
     GenEvent::getInstance().genScanProgress(getTaskId(), GenEvent::SCAN_TASK_OVER,
-            getScannedFileNum(), getTotalFileNum(), getTimes(), getIsScheduled(), DataBase::getInstance().getExecTimes(getTaskId()));
+            getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
 
     // 保存数据库
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
     DataBase::getInstance().updateTaskStatusFinished(getTaskId());
+}
+
+bool ScanTask::getIsForceRestart() const
+{
+    return mForceRestart;
+}
+
+void ScanTask::setIsForceRestart(bool forceRestart)
+{
+    mForceRestart = forceRestart;
 }
 
 qint64 ScanTask::getScannedFileNum(const QString& taskId)
@@ -563,7 +673,7 @@ void ScanTask::run()
     startRun();
 
     while (true) {
-        if (!mIsRunning || mTaskStatus != ScanTaskStatus::Running) {
+        if (!mIsRunning) {
             break;
         }
 
@@ -571,9 +681,8 @@ void ScanTask::run()
         pop100File(fileMap);
 
         if (fileMap.size() <= 0) {
-            finishedRun();
             TASK_SCAN_LOG_INFO << "Finish scan Task: " << getTaskId();
-            continue;
+            break;
         }
         TASK_SCAN_LOG_INFO << "start scann '" << fileMap.size() << "' files ...";
         for (const auto& f : fileMap) {
@@ -582,11 +691,15 @@ void ScanTask::run()
         update100FileStatus(fileMap);
         progress();
     }
+
+    finishedRun();
+    TASK_SCAN_LOG_INFO << "Finish scan Task: " << getTaskId() << " process EXIT!";
 }
 
 void ScanTask::setTimes(int times)
 {
     mTimes = times;
+    DataBase::getInstance().setTimes(getTaskId(), times);
 }
 
 void ScanTask::setPolicyIdList(const QString& policyIdList)

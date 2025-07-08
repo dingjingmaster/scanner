@@ -21,7 +21,7 @@
     "SELECT task_id, task_name, scan_task_dir, scan_task_dir_exception, " \
     "scan_task_file_ext, scan_task_file_ext_exception, " \
     "start_time, stop_time, total_file, finished_file, " \
-    "task_status, scan_mode, round, times FROM scan_task;"
+    "task_status, scan_mode, round, times, is_scheduled FROM scan_task;"
 
 #define SCAN_TASK_TABLE \
     "CREATE TABLE scan_task (" \
@@ -172,7 +172,7 @@ void DataBase::insertTask(const QString & taskId, const QString & taskName,
             cmd.bind(":scheduling_cron", schedulingCron);
             cmd.bind(":task_status", taskStatus);
             cmd.bind(":scan_mode", scanMode);
-            cmd.bind(":round", 1);
+            cmd.bind(":round", 0);
             cmd.execute();
         }
         catch (std::exception& e) {
@@ -408,9 +408,68 @@ bool DataBase::getIsScheduled(const QString& taskId) const
     catch (std::exception& ex) {
         qWarning() << "err: " << ex.what();
     }
-    qInfo() << "ret: " << ret << ", execTimes: " << execTimes;
+    qInfo() << "ret: " << ret << ", scheduled: " << execTimes;
 
     return (execTimes == 1);
+}
+
+enum DataBase::TaskStatus DataBase::getTaskStatus(const QString& taskId) const
+{
+    int ret = 0;
+    int status = 0;
+
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, "SELECT task_status FROM scan_task WHERE task_id=?;");
+        query.bind(1, taskId);
+        auto iter = query.begin();
+        if (iter != query.end()) {
+            status = (*iter).get<int>(0);
+        }
+        ret = query.finish();
+        qInfo() << "status: " << status << ", ret: " << ret;
+    }
+    catch (std::exception& e) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to update scan_task: " << e.what();
+    }
+
+    if (TASK_STATUS_RUNNING == status) {
+        return TASK_STATUS_RUNNING;
+    }
+    else if (TASK_STATUS_STOPPED == status) {
+        return TASK_STATUS_STOPPED;
+    }
+    else if (TASK_STATUS_FINISHED == status) {
+        return TASK_STATUS_FINISHED;
+    }
+    else if (TASK_STATUS_PAUSE == status) {
+        return TASK_STATUS_PAUSE;
+    }
+
+    return TASK_STATUS_UNKNOWN;
+}
+
+bool DataBase::checkNeedRun(const QString& taskId) const
+{
+    int ret = 0;
+    int times = 0;
+    int round = 0;
+
+    try {
+        sqlite3_wrap::Sqlite3Query query(*mDB, "SELECT times, round FROM scan_task WHERE task_id=?;");
+        query.bind(1, taskId);
+        auto iter = query.begin();
+        if (iter != query.end()) {
+            times = (*iter).get<int>(0);
+            round = (*iter).get<int>(1);
+        }
+        ret = query.finish();
+        qInfo() << "times: " << times << "round: " << round << ", ret: " << ret;
+    }
+    catch (std::exception& e) {
+        qWarning() << __FUNCTION__ << __LINE__ << "Failed to update scan_task: " << e.what();
+    }
+
+    return round <= times;
 }
 
 QStringList DataBase::queryTaskIds() const
@@ -449,6 +508,43 @@ int DataBase::getExecTimes(const QString& taskId) const
     qInfo() << "ret: " << ret << ", execTimes: " << execTimes;
 
     return execTimes;
+}
+
+int DataBase::getTimes(const QString& taskId) const
+{
+    int ret = 0;
+    int execTimes = 0;
+
+    try {
+        sqlite3_wrap::Sqlite3Query cmd(*mDB, "SELECT times FROM scan_task WHERE task_id=?;");
+        cmd.bind(1, taskId);
+        auto iter = cmd.begin();
+        if (iter != cmd.end()) {
+            execTimes = (*iter).get<int>(0);
+        }
+        ret = cmd.finish();
+    }
+    catch (std::exception& ex) {
+        qWarning() << "err: " << ex.what();
+    }
+    qInfo() << "ret: " << ret << ", execTimes: " << execTimes;
+
+    return execTimes;
+}
+
+void DataBase::setTimes(const QString& taskId, int times) const
+{
+    try {
+        int ret = 0;
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET times = ? WHERE task_id=?;");
+        cmd.bind(1, times);
+        cmd.bind(1, taskId);
+        ret = cmd.execute();
+        qInfo() << "ret: " << ret << ", times: " << times;
+    }
+    catch (std::exception& ex) {
+        qWarning() << "err: " << ex.what();
+    }
 }
 
 void DataBase::deleteTask(const QString& taskId) const
@@ -609,7 +705,8 @@ void DataBase::showScanTask() const
                 << "Task Status     : " << getTaskStatusString((*iter).get<int>(10)) << "\n" \
                 << "Task Mode       : " << getTaskModeString((*iter).get<int>(11)) << "\n" \
                 << "Round           : " << (*iter).get<int>(12) << "\n" \
-                << "Times           : " << (*iter).get<int>(13) << "\n\n\n";
+                << "Times           : " << (*iter).get<int>(13) << "\n" \
+                << "Is scheduled    : " << (*iter).get<int>(14) << "\n\n\n";
         }
         query.finish();
     }
@@ -847,6 +944,12 @@ bool DataBase::checkTempTaskFileExist(const QString& taskId) const
     const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
 
     return QFile::exists(path);
+}
+
+void DataBase::deleteTempTaskFile(const QString& taskId) const
+{
+    const QString path = QString("%1%2").arg(TASK_TMP_SCAN_FILE).arg(taskId);
+    QFile::remove(path);
 }
 
 void DataBase::saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files) const

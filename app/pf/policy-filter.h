@@ -20,7 +20,7 @@ public:
 
 private:
     bool checkFileNeedParse(const QString &filePath) const;
-    void updatePolicyFile(const QString &filePath);
+    void updatePolicyFile(const QString &filePath, const QString& md5);
 
 Q_SIGNALS:
     void scanStart(const QString& taskId, QPrivateSignal);

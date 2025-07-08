@@ -59,11 +59,16 @@ public:
     bool getUseOCR() const;
     void setUseOCR(int useOCR);
 
+    void setParseOK();
+    void setParseFail();
+    bool getIsParseOK() const;
+
 private:
     QString                 mTaskId;
     QString                 mTaskName;
     TaskType                mTaskType;
     bool                    mIsUseOCR;
+    bool                    mParseOK = false;
 };
 
 class ScanTask final : public TaskBase
@@ -97,7 +102,8 @@ public:
     const QSet<QString>& getBypassFileType() const;
     const QSet<QString>& getTaskBypassPath() const;
 
-    bool checkNeedRun() const;
+    bool checkNeedRun();
+    void taskForceReload() const;
 
     void errorRun();                            // 出错
     void initRun() const;                       // 初始运行
@@ -107,6 +113,8 @@ public:
     void startRun();                            // 开始运行
     void finishedRun();                         // 扫描完成
 
+    bool getIsForceRestart() const;
+    void setIsForceRestart(bool forceRestart);
 
     static qint64 getScannedFileNum(const QString& taskId);
     static qint64 getTotalFileNum(const QString& taskId);
@@ -132,7 +140,6 @@ public:
 
 private:
     void scanFiles();
-    void taskFinished();
     void pop100File(QStringList& fileMap);
     void update100FileStatus(QStringList& fileMap);
     QPair<QString, QString> getScanFileResult (const QString& filePath);
@@ -142,6 +149,7 @@ private:
     void scanFile(const QString& filePath);
 
 private:
+    bool                                            mForceRestart = false;
     bool                                            mFinishedOneTime = false;
     int                                             mTimes;
     bool                                            mIsScheduled;

@@ -17,6 +17,14 @@ class DataBase final : public QObject
 {
     Q_OBJECT
 public:
+    enum TaskStatus
+    {
+        TASK_STATUS_UNKNOWN = 0,
+        TASK_STATUS_RUNNING = 1,
+        TASK_STATUS_STOPPED = 2,
+        TASK_STATUS_FINISHED = 3,
+        TASK_STATUS_PAUSE = 4,
+    };
     static DataBase& getInstance();
     DataBase(DataBase &&) = delete;
     DataBase(DataBase const &) = delete;
@@ -42,6 +50,7 @@ public:
     void updateFinishedFileAdd(const QString& taskId, qint64 finishedFile) const;
     void updateStartTime(const QString& taskId, const QDateTime& startTime) const;
     void updateStopTime(const QString& taskId, const QDateTime& stopTime) const;
+
     void updateTaskStatusPause(const QString& taskId) const;
     void updateTaskStatusRunning(const QString& taskId) const;
     void updateTaskStatusStopped(const QString& taskId) const;
@@ -51,10 +60,14 @@ public:
     qint64 getFinishedFileNum(const QString& taskId) const;
     qint64 getTotalFileNum(const QString& taskId) const;
     bool getIsScheduled(const QString& taskId) const;
+    enum TaskStatus getTaskStatus(const QString& taskId) const;
+    bool checkNeedRun(const QString& taskId) const;
 
     // 获取所有TaskId
     QStringList queryTaskIds() const;
     int getExecTimes(const QString& taskId) const;
+    int getTimes(const QString& taskId) const;
+    void setTimes(const QString& taskId, int times) const;
 
     // 删除扫描任务，标记已经删除的任务Id
     void deleteTask(const QString& taskId) const;
@@ -76,6 +89,7 @@ public:
 
     // 扫描任务临时文件
     bool checkTempTaskFileExist(const QString& taskId) const;
+    void deleteTempTaskFile(const QString& taskId) const;
     void saveTempTaskFileFirst(const QString& taskId, const QSet<QString>& files) const;
     void loadTempTaskFile(const QString& taskId, QSet<QString>& filesForScan, QSet<QString>& filesScanned) const;
     void updateTempTaskFile(const QString& taskId, const QSet<QString>& filesForScan, QSet<QString>& filesScanned) const;

@@ -41,6 +41,7 @@ void GenEvent::genScanProgress(const QString& taskId, ScanStatus scanStatus, qin
                 .arg(isScheduled ? 1 : 0)
                 .arg(execTimes);
 
+    qInfo() << "\n上报:\n" << ctx;
     auto resp = sendServerTypeAndWaitResp(SCAN_PROGRESS_TYPE, ctx.toUtf8(), false);
 
 #undef SCAN_PROGRESS_TYPE

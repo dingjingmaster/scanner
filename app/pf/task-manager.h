@@ -18,6 +18,8 @@ public:
     TaskManager(const TaskManager&) = delete;
     TaskManager& operator=(const TaskManager&) = delete;
 
+    bool isValidScanTaskId(const QString& scanTaskId);
+
     std::shared_ptr<TaskBase> getTaskById(const QString& id);
 
     bool parseScanTask(const QString &scanTask);
@@ -26,6 +28,7 @@ public:
     void startScanTask(std::shared_ptr<TaskBase> task);
     static QString getTaskIdByPolicyFile(const QString & policyFile);
 
+    void checkAllTask();
     void startRunTaskAll();
     void startScanTask(const QString &scanTaskId);
     void stopScanTask(const QString &scanTaskId);
