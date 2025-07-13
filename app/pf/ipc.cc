@@ -13,7 +13,10 @@
 
 #include <QDebug>
 
+#include "proc-inject.h"
 #include "task-manager.h"
+#include "utils.h"
+#include "macros/macros.h"
 
 
 #define IPC_SCAN_TASK_SOCKET_PATH "/usr/local/andsec/start/andsec-scan-task.sock"
@@ -27,6 +30,9 @@ gboolean new_request (GSocketService* ls, GSocketConnection* conn, GObject* srcO
 static void process_client_scan_task_stop_task      (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
 static void process_client_scan_task_pause_task     (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
 static void process_client_scan_task_start_task     (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
+
+static void process_client_inject_lib_by_pid        (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
+static void process_client_inject_lib_by_proc_name  (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
 
 
 Ipc Ipc::gInstance;
@@ -108,6 +114,8 @@ Ipc::Ipc(QObject* parent)
     mClientProcessor[IPC_TYPE_SERVER_STOP_TASK]                 = process_client_scan_task_stop_task;
     mClientProcessor[IPC_TYPE_SERVER_PAUSE_TASK]                = process_client_scan_task_pause_task;
     mClientProcessor[IPC_TYPE_SERVER_START_TASK]                = process_client_scan_task_start_task;
+    mClientProcessor[IPC_TYPE_INJECT_LIB_BY_PID]                = process_client_inject_lib_by_pid;
+    mClientProcessor[IPC_TYPE_INJECT_LIB_BY_PROC_NAME]          = process_client_inject_lib_by_proc_name;
 }
 
 gboolean new_request (GSocketService* ls, GSocketConnection* conn, GObject* srcObj, gpointer uData)
@@ -237,6 +245,31 @@ static void process_client_scan_task_start_task (Ipc* ipc, const QByteArray& dat
     const QString taskId(data);
 
     TaskManager::getInstance()->startScanTask(taskId);
+
+    Q_UNUSED(ipc);
+    Q_UNUSED(clientSock);
+}
+
+static void process_client_inject_lib_by_pid (Ipc* ipc, const QByteArray& data, GSocket& clientSock)
+{
+    const auto arr = data.split('|');
+    C_RETURN_IF_FAIL(arr.size() == 2);
+    const int pid = arr.at(0).toInt();
+    const QString procName = Utils::getProcNameByPid(pid);
+    const bool ret = proc_inject_inject_so_by_pid(pid, arr[1]);
+    qInfo() << "Inject to pid: " << arr[0] << ", procName: " << procName << ", library: " << arr[1] << ", ret: " << ret;
+
+    Q_UNUSED(ipc);
+    Q_UNUSED(clientSock);
+}
+
+static void process_client_inject_lib_by_proc_name  (Ipc* ipc, const QByteArray& data, GSocket& clientSock)
+{
+    const auto arr = data.split('|');
+    C_RETURN_IF_FAIL(arr.size() == 2);
+    const QString procName = arr.at(0);
+    const bool ret = proc_inject_inject_so_by_proc_name(procName.toUtf8().constData(), arr[1]);
+    qInfo() << "Inject to procName: " << procName << ", library: " << arr[1] << ", ret: " << ret;
 
     Q_UNUSED(ipc);
     Q_UNUSED(clientSock);

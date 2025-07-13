@@ -10,8 +10,18 @@
 #include <opencc.h>
 #include <QCryptographicHash>
 
+#include "proc-inject.h"
 #include "../macros/macros.h"
 
+
+struct ProcName
+{
+    pid_t       pid;
+    QString     name;
+};
+
+static bool proc_pid_name (pid_t pid, const char* procPath, int uid, void* data);
+static bool check_is_dynamic_library (const char* path);
 
 static const char* sDict[] = {
     ".tar.bz2",
@@ -86,6 +96,20 @@ static void initFileExtName()
         sDictIdx << sDict[i];
     }
     lock.unlock();
+}
+
+QString Utils::getProcNameByPid(int pid)
+{
+    const QString exe = QString("/proc/%1/exe").arg(pid);
+    if (QFile::exists(exe)) {
+        const QFile f(exe);
+        const QString target = f.symLinkTarget();
+        if (!target.isNull() && !target.isEmpty()) {
+            return QFile(target).fileName();
+        }
+    }
+
+    return "";
 }
 
 qint64 Utils::getFileSize(const QString& path)
@@ -163,4 +187,84 @@ QString Utils::getFileExtName(const QString& filePath)
     }
 
     return (extName.size() > 1) ? extName : "";
+}
+
+int Utils::getPidByProcName(const QString& procName)
+{
+    struct ProcName procNameS = {
+        .pid = 0,
+        .name = QString("/%1").arg(procName),
+    };
+
+    proc_list_all(proc_pid_name, &procNameS);
+
+    return procNameS.pid;
+}
+
+bool Utils::checkProcLibraryExists(int pid, const char* libraryPath)
+{
+    FILE* fr = nullptr;
+    bool ret = false;
+    char mapsPath[128] = {0};
+    char lineBuf[1024] = {0};
+
+    snprintf(mapsPath, sizeof(mapsPath) - 1, "/proc/%d/maps", pid);
+
+    fr = fopen(mapsPath, "r");
+    if (fr) {
+        while (fgets(lineBuf, sizeof(lineBuf), fr)) {
+            lineBuf[strcspn(lineBuf, "\n")] = 0;
+
+            // /proc/self/maps 格式：
+            // 地址范围 权限 偏移量 设备 inode 路径名
+            // 例如：7f1234567000-7f1234568000 r-xp 00000000 08:01 1234567 /lib/x86_64-linux-gnu/libc.so.6
+            char* tokens[8] = { nullptr };
+            char* token = strtok(lineBuf, " ");
+            int tokenCount = 0;
+
+            // 分割行内容
+            while (token && tokenCount < 6) {
+                tokens[tokenCount++] = token;
+                token = strtok(nullptr, " ");
+            }
+
+            // 如果有路径字段(第6列)
+            if (tokenCount >= 6) {
+                char* path = tokens[5];
+                // 跳过剩余的空格，获取完整的路径
+                while (*path == ' ') { path++; }
+                // 检查是否是动态库
+                if (check_is_dynamic_library(path) && 0 == c_strcmp(libraryPath, path)) {
+                    ret = true;
+                    break;
+                }
+            }
+        }
+        fclose(fr);
+    }
+
+    return ret;
+}
+
+static bool check_is_dynamic_library (const char* path)
+{
+    C_RETURN_VAL_IF_FAIL(path && strlen(path) > 0, false);
+
+    const char* ext = strrchr(path, '.');
+    C_RETURN_VAL_IF_OK(ext && 0 == c_strcmp(ext, ".so"), true);
+    C_RETURN_VAL_IF_OK(strstr(path, ".so."), true);
+
+    return false;
+}
+
+static bool proc_pid_name (pid_t pid, const char* procPath, int uid, void* data)
+{
+    struct ProcName* procName = static_cast<struct ProcName*>(data);
+
+    if (QString(procPath).endsWith(procName->name)) {
+        procName->pid = pid;
+        return false;
+    }
+
+    return true;
 }
