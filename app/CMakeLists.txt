@@ -43,6 +43,7 @@ target_compile_options(andsec-scanner PUBLIC -fPIC)
 target_compile_definitions(andsec-scanner PUBLIC -D JAVA_HOME=\\"${JAVA_HOME}\\")
 
 
+add_subdirectory(common)
 add_subdirectory(hook-func)
 
 # hook
@@ -51,7 +52,7 @@ add_library(dlp-hook-main SHARED
         hook/hook-main.c
 )
 target_compile_options(dlp-hook-main PUBLIC -fPIC)
-target_link_libraries(dlp-hook-main PUBLIC hook-func)
+target_link_libraries(dlp-hook-main PUBLIC hook-func common)
 set_target_properties(dlp-hook-main PROPERTIES PREFIX "")
 target_include_directories(dlp-hook-main PUBLIC ${CMAKE_SOURCE_DIR}/app)
 
