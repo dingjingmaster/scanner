@@ -36,8 +36,17 @@ find_package(Qt5 COMPONENTS Core Network REQUIRED)
 pkg_check_modules(HS REQUIRED libhs)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(OPENCC REQUIRED opencc)
+pkg_check_modules(CAPS capstone REQUIRED)
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
+pkg_check_modules(CLIB REQUIRED clibrary-c-static)
 pkg_check_modules(QT5 REQUIRED Qt5Core Qt5Network)
+
+include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${GIO_INCLUDE_DIRS})
+include_directories(${CAPS_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/app)
+
+add_definitions(-D _GNU_SOURCE)
 
 cmake_host_system_information(RESULT OS QUERY OS_NAME)
 cmake_host_system_information(RESULT RELEASE QUERY OS_RELEASE)

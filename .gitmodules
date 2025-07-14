@@ -10,3 +10,6 @@
 [submodule "app/hs-wrap"]
 	path = app/hs-wrap
 	url = git@github.com:dingjingmaster/hs-wrap.git
+[submodule "app/hook-func"]
+	path = app/hook-func
+	url = git@github.com:dingjingmaster/hook-func.git
