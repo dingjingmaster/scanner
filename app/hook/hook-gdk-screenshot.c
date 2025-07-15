@@ -13,16 +13,6 @@
 #include "hook-func/src/hook-func.h"
 
 
-#define LOGI
-
-#ifdef LOGI
-#include <syslog.h>
-#define logi(...) syslog(LOG_ERR, __VA_ARGS__)
-#else
-#define logi(...)
-#endif
-
-
 void hook_gdk_init() __attribute__((constructor()));
 void hook_gdk_cleanup() __attribute__((destructor()));
 

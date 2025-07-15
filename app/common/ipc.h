@@ -28,6 +28,7 @@ typedef enum
 
     // from sec_daemon
     IPC_TYPE_SCREENSHOT = 31,                       // 31 截屏控制
+    IPC_TYPE_CHECK_PROC_NETWORK_FORBIDDEN = 32,     // 32 检测是否禁止联网
 
     IPC_TYPE_NUM
 } IpcServerType;
