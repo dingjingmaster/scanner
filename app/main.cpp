@@ -4,11 +4,14 @@
 
 #include "pf/policy-filter.h"
 
+#include "pf/qlog.h"
+#include "pf/glog.h"
+
 #define C_LOG_TAG "AndsecScanner"
-void c_qlog_handler(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 
 int main (int argc, char* argv[])
 {
+    g_log_set_writer_func(c_glog_handler, nullptr, nullptr);
     qInstallMessageHandler(c_qlog_handler);
     PolicyFilter app(argc, argv);
 
@@ -17,14 +20,5 @@ int main (int argc, char* argv[])
     return PolicyFilter::exec();
 }
 
-void c_qlog_handler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
-{
-    QByteArray localMsg = msg.toLocal8Bit();
-    const char *file = context.file ? context.file : "";
-    const char *function = context.function ? context.function : "";
 
-    printf("[%s", C_LOG_TAG);
-    printf(" %s %d %s] ", file, context.line, function);
-    printf("%s\n", msg.toUtf8().constData());
-}
 

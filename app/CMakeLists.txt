@@ -1,6 +1,9 @@
 add_executable(andsec-scanner main.cpp
         pf/ipc.cc pf/ipc.h
 
+        pf/log.c pf/log.h
+        pf/glog.c pf/glog.h
+        pf/qlog.cpp pf/qlog.h
         pf/utils.cc pf/utils.h
         pf/data-base.cc pf/data-base.h
         pf/task-base.cpp pf/task-base.h
@@ -11,6 +14,8 @@ add_executable(andsec-scanner main.cpp
         pf/general-setting.cc pf/general-setting.h
 
         pf/gen-event.cc pf/gen-event.h
+
+        common/proc-list.c common/proc-list.h
 
         tika-wrap/src/java-env.cpp tika-wrap/src/java-env.h
 
@@ -65,3 +70,11 @@ target_compile_options(hook-gdk-screenshot PUBLIC -fPIC)
 set_target_properties(hook-gdk-screenshot PROPERTIES PREFIX "")
 target_link_libraries(hook-gdk-screenshot PUBLIC hook-func common)
 target_include_directories(hook-gdk-screenshot PUBLIC ${CMAKE_SOURCE_DIR}/app)
+
+add_library(hook-ld_preload SHARED
+        hook/hook-ld_preload.c
+)
+
+target_compile_options(hook-ld_preload PUBLIC -fPIC)
+set_target_properties(hook-ld_preload PROPERTIES PREFIX "")
+

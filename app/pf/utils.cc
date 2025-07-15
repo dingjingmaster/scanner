@@ -12,6 +12,7 @@
 
 #include "proc-inject.h"
 #include "../macros/macros.h"
+#include "../common/proc-list.h"
 
 
 struct ProcName
@@ -20,7 +21,7 @@ struct ProcName
     QString     name;
 };
 
-static bool proc_pid_name (pid_t pid, const char* procPath, int uid, void* data);
+static bool proc_pid_name (pid_t pid, const char* procPath, int uid, bool isGui, void* data);
 static bool check_is_dynamic_library (const char* path);
 
 static const char* sDict[] = {
@@ -257,7 +258,7 @@ static bool check_is_dynamic_library (const char* path)
     return false;
 }
 
-static bool proc_pid_name (pid_t pid, const char* procPath, int uid, void* data)
+static bool proc_pid_name (pid_t pid, const char* procPath, int uid, bool isGui, void* data)
 {
     struct ProcName* procName = static_cast<struct ProcName*>(data);
 

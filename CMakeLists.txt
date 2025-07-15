@@ -23,11 +23,13 @@ add_definitions(
         -D QT_MESSAGELOGCONTEXT
         -D DDEBUG
 
+        -D G_LOG_TAG=\\"${PROJECT_NAME}\\"
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
         -D INSTALL_PATH=\\"/usr/local/andsec\\"
-        -D DATA_DIR=\\"/tmp\\"
-#        -D DATA_DIR=\\"/var/lib/andsec/scanner/\\"
+#        -D DATA_DIR=\\"/tmp\\"
+        -D DATA_DIR=\\"/var/lib/andsec/scanner/\\"
+        -D C_LOG_DIR=\\"/usr/local/andsec/log/\\"
         -D PACKAGE_VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\")
 
 find_package (PkgConfig)
@@ -38,7 +40,6 @@ pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(OPENCC REQUIRED opencc)
 pkg_check_modules(CAPS capstone REQUIRED)
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
-pkg_check_modules(CLIB REQUIRED clibrary-c-static)
 pkg_check_modules(QT5 REQUIRED Qt5Core Qt5Network)
 
 include_directories(${CMAKE_SOURCE_DIR})

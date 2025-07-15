@@ -7,7 +7,6 @@
 #include <QString>
 
 
-
 class Utils
 {
 public:

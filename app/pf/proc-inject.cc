@@ -21,6 +21,7 @@
 #include <sys/syslog.h>
 
 #include "utils.h"
+#include "common/ipc.h"
 
 
 struct _ProcInject
@@ -29,9 +30,7 @@ struct _ProcInject
     uint32_t                pid;
 };
 
-static int proc_get_uid (int pid);
-
-static bool proc_get_proc_path (int pid, char buf[], int size);
+static bool inject_all_gui_default_so (int pid, const char* procPath, int uid, bool isGui, void* uData);
 
 bool proc_inject_inject_so_by_pid(int32_t pid, const char * libraryPath)
 {
@@ -49,8 +48,9 @@ bool proc_inject_inject_so_by_pid(int32_t pid, const char * libraryPath)
         C_BREAK_IF_FAIL_SYSLOG_WARN(proc_inject_attach_to(injector), "Could not attach to injector.");
 
         remoteAddr = proc_inject_remote_call(injector, (void*) malloc, 1, 1024);
-        C_BREAK_IF_FAIL_SYSLOG_WARN(remoteAddr > 1, "Remote malloc failed!\n");
-        C_BREAK_IF_FAIL_SYSLOG_WARN(proc_inject_write_memory(injector, remoteAddr, (uintptr_t)libraryPath, libLen + sizeof(char)), "Writing library path failed!\n");
+        C_BREAK_IF_FAIL_SYSLOG_WARN(remoteAddr > 1, "Remote malloc failed!");
+        C_BREAK_IF_FAIL_SYSLOG_WARN(proc_inject_write_memory(injector, remoteAddr, (uintptr_t)libraryPath, libLen + sizeof(char)),
+            "Writing library path failed!\n");
 
         const uintptr_t dlopenRet = proc_inject_remote_call(injector, (void*) dlopen, 2, remoteAddr, RTLD_NOW | RTLD_GLOBAL);
         if (1 == dlopenRet) {
@@ -66,7 +66,7 @@ bool proc_inject_inject_so_by_pid(int32_t pid, const char * libraryPath)
             }
             C_BREAK_IF_FAIL_SYSLOG_WARN(!proc_inject_read_memory(injector, errorAddr, (uintptr_t)errorStr, sizeof(errorStr) - 1), "%s", errorStr);
         }
-    } while (0);
+    } while (false);
 
     if (remoteAddr > 1) {
         proc_inject_remote_call(injector, (void*) free, 1, remoteAddr);
@@ -83,6 +83,11 @@ bool proc_inject_inject_so_by_proc_name(const char* procName, const char* librar
     C_RETURN_VAL_IF_FAIL(pid > 0, false);
 
     return proc_inject_inject_so_by_pid(pid, libraryPath);
+}
+
+void proc_inject_inject_all_gui_proc()
+{
+    proc_list_all(inject_all_gui_default_so, nullptr);
 }
 
 ProcInject* proc_inject_create_by_pid(uint32_t pid)
@@ -145,32 +150,6 @@ bool proc_inject_create_by_pid2(ProcInject* injector, uint32_t pid)
     injector->isAttach = false;
 
     return true;
-}
-
-void proc_list_all(ProcIterator iter, void* data)
-{
-    C_RETURN_IF_FAIL_SYSLOG_WARN(iter, "iter is null!");
-
-    struct dirent* entry = nullptr;
-    DIR* dir = opendir("/proc");
-    C_RETURN_IF_FAIL(dir);
-
-    char procPath[PATH_MAX] = {0};
-
-    while ((entry = readdir(dir)) != nullptr) {
-        if (strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
-            const pid_t pid = static_cast<pid_t>(strtol(entry->d_name, nullptr, 10));
-            if (pid > 0) {
-                if (proc_get_proc_path(pid, procPath, sizeof(procPath))) {
-                    if (!iter(pid, procPath, proc_get_uid(pid), data)) {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    closedir(dir);
 }
 
 uintptr_t proc_inject_get_base(ProcInject* injector, const char * moduleName, bool isLocal)
@@ -365,43 +344,14 @@ bool proc_inject_get_local_module_name(ProcInject* injector, void * address, cha
     return false;
 }
 
-static int proc_get_uid (int pid)
+
+static bool inject_all_gui_default_so (int pid, const char* procPath, int uid, bool isGui, void* uData)
 {
-    uid_t uid = 0;
-    char line[256];
-    FILE* fp = nullptr;
-    char filePath[32] = {0};
-
-    snprintf(filePath, sizeof(filePath) - 1, "/proc/%d/status", pid);
-
-    // 打开 /proc/self/status 文件
-    fp = fopen(filePath, "r");
-    if (fp == nullptr) {
-        return -1;
-    }
-
-    // 逐行读取文件内容
-    while (fgets(line, sizeof(line), fp)) {
-        // 查找包含 "Uid:" 的行
-        if (strncmp(line, "Uid:", 4) == 0) {
-            // 解析 UID 值
-            sscanf(line, "Uid:\t%u", &uid);
-            break;
+    if (uid != 0 && isGui) {
+        if (!proc_inject_inject_so_by_pid(pid, HOOK_PRELOAD)) {
+            g_warning("[Hook] pid: %d, proc: %s, uid: %d, isGui: %s, error!", pid, procPath, uid, (isGui ? "true" : "false"));
         }
     }
 
-    // 关闭文件
-    fclose(fp);
-
-    return uid;
-}
-
-static bool proc_get_proc_path (int pid, char buf[], int size)
-{
-    memset(buf, 0 , size);
-
-    char exe[128] = {0};
-    snprintf(exe, sizeof(exe), "/proc/%d/exe", pid);
-
-    return readlink(exe, buf, size - 1) > 0;
+    return true;
 }

@@ -33,6 +33,7 @@ static void process_client_scan_task_start_task     (Ipc* ipc, const QByteArray&
 
 static void process_client_inject_lib_by_pid        (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
 static void process_client_inject_lib_by_proc_name  (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
+static void process_client_inject_all_all_gui_proc  (Ipc* ipc, const QByteArray& data, GSocket& clientSock);
 
 
 Ipc Ipc::gInstance;
@@ -116,6 +117,7 @@ Ipc::Ipc(QObject* parent)
     mClientProcessor[IPC_TYPE_SERVER_START_TASK]                = process_client_scan_task_start_task;
     mClientProcessor[IPC_TYPE_INJECT_LIB_BY_PID]                = process_client_inject_lib_by_pid;
     mClientProcessor[IPC_TYPE_INJECT_LIB_BY_PROC_NAME]          = process_client_inject_lib_by_proc_name;
+    mClientProcessor[IPC_TYPE_INJECT_ALL_ALL_GUI_PROC]          = process_client_inject_all_all_gui_proc;
 }
 
 gboolean new_request (GSocketService* ls, GSocketConnection* conn, GObject* srcObj, gpointer uData)
@@ -272,5 +274,14 @@ static void process_client_inject_lib_by_proc_name  (Ipc* ipc, const QByteArray&
     qInfo() << "Inject to procName: " << procName << ", library: " << arr[1] << ", ret: " << ret;
 
     Q_UNUSED(ipc);
+    Q_UNUSED(clientSock);
+}
+
+static void process_client_inject_all_all_gui_proc  (Ipc* ipc, const QByteArray& data, GSocket& clientSock)
+{
+    proc_inject_inject_all_gui_proc();
+
+    Q_UNUSED(ipc);
+    Q_UNUSED(data);
     Q_UNUSED(clientSock);
 }
