@@ -12,7 +12,7 @@
 
 #include "utils.h"
 #include "sqlite3-wrap.h"
-#include "../macros/macros.h"
+#include "macros/macros.h"
 
 
 #define TASK_TMP_SCAN_FILE                      DATA_DIR"/andsec-task-"

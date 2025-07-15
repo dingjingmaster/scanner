@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.15)
 project(andsec-scanner LANGUAGES C CXX)
 
 set(DEBUG ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
+#set(CMAKE_AUTOUIC ON)
+#set(CMAKE_AUTOMOC ON)
+#set(CMAKE_AUTORCC ON)
 
 set(PROJECT_VERSION_MAJOR 0)
 set(PROJECT_VERSION_MINOR 0)
@@ -43,8 +43,8 @@ pkg_check_modules(QT5 REQUIRED Qt5Core Qt5Network)
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${GIO_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/app)
-include_directories(${CMAKE_SOURCE_DIR}/app/hook-func/3thrd/capstone/include)
-include_directories(${CMAKE_SOURCE_DIR}/app/hook-func/3thrd/capstone/include/capstone)
+include_directories(${CMAKE_SOURCE_DIR}/hook-func/3thrd/capstone/include)
+include_directories(${CMAKE_SOURCE_DIR}/hook-func/3thrd/capstone/include/capstone)
 
 add_definitions(-D _GNU_SOURCE)
 

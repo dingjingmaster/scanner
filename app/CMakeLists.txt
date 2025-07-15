@@ -15,11 +15,11 @@ add_executable(andsec-scanner main.cpp
 
         pf/gen-event.cc pf/gen-event.h
 
-        tika-wrap/src/java-env.cpp tika-wrap/src/java-env.h
+        ../tika-wrap/src/java-env.cpp ../tika-wrap/src/java-env.h
 
-        hs-wrap/src/regex-matcher.cpp hs-wrap/src/regex-matcher.h
+        ../hs-wrap/src/regex-matcher.cpp ../hs-wrap/src/regex-matcher.h
 
-        sqlite3-wrap/src/sqlite3-wrap.cc sqlite3-wrap/src/sqlite3-wrap.h
+        ../sqlite3-wrap/src/sqlite3-wrap.cc ../sqlite3-wrap/src/sqlite3-wrap.h
 )
 target_include_directories(andsec-scanner PUBLIC
         ${HS_INCLUDE_DIRS}
@@ -30,8 +30,8 @@ target_include_directories(andsec-scanner PUBLIC
         ${CMAKE_SOURCE_DIR}/app
         ${JAVA_HOME}/include
         ${JAVA_HOME}/include/linux
-        ${CMAKE_SOURCE_DIR}/app/hs-wrap/src
-        ${CMAKE_SOURCE_DIR}/app/sqlite3-wrap/src
+        ${CMAKE_SOURCE_DIR}/hs-wrap/src
+        ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
 target_link_libraries(andsec-scanner PUBLIC
         -pthread -ldl common
@@ -47,3 +47,4 @@ target_link_libraries(andsec-scanner PUBLIC
 )
 target_compile_options(andsec-scanner PUBLIC -fPIC)
 target_compile_definitions(andsec-scanner PUBLIC -D JAVA_HOME=\\"${JAVA_HOME}\\")
+set_target_properties(andsec-scanner PROPERTIES AUTOUIC ON AUTOMOC ON AUTORCC ON)

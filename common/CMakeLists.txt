@@ -6,3 +6,4 @@ add_library(common STATIC
         utils-ipc.h utils-ipc.c
 )
 target_compile_options(common PUBLIC -fPIC)
+set_target_properties(common PROPERTIES LINKER_LANGUAGE C)
