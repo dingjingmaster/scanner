@@ -57,7 +57,7 @@ set_target_properties(dlp-hook-main PROPERTIES PREFIX "")
 target_include_directories(dlp-hook-main PUBLIC ${CMAKE_SOURCE_DIR}/app)
 
 add_library(hook-gdk-screenshot SHARED
-        hook/hook-common.h
+        hook/hook-common.h hook/hook-common.c
         hook/hook-gdk-screenshot.c
 )
 

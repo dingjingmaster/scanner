@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <bits/socket.h>
 
+#include "ipc.h"
 #include "proc-list.h"
 #include "macros/macros.h"
 
@@ -207,6 +208,36 @@ uint64_t utils_send_data_to_local_socket_with_response(const char * localSocket,
             }
         }
     } while (false);
+
+    return recvBufLen;
+}
+
+uint64_t utils_send_data_to_local_socket_with_response_data(const char* localSocket, int ipcType, const char* data, size_t dataSize, char** response)
+{
+    C_RETURN_VAL_IF_FAIL(localSocket && data, 0);
+    const uint64_t allDataLen = sizeof(struct IpcMessage) + dataSize + 1;
+    char* allData = malloc(allDataLen);
+    C_RETURN_VAL_IF_FAIL(allData, false);
+    memset(allData, 0, allDataLen);
+    struct IpcMessage* ipcMsg = (void*) allData;
+    ipcMsg->type = ipcType;
+    ipcMsg->dataLen = dataSize;
+    memcpy(ipcMsg->data, data, dataSize);
+
+    char* resp = NULL;
+    uint64_t recvBufLen = 0;
+    const uint64_t respDataLen = utils_send_data_to_local_socket_with_response(localSocket, allData, allDataLen, &resp);
+    C_FREE_FUNC_NULL(allData, free);
+    if (respDataLen >= sizeof(struct IpcMessage)) {
+        const struct IpcMessage* respMsg = (struct IpcMessage*) resp;
+        C_FREE_FUNC_NULL(*response, free);
+        if (respMsg->dataLen > 0) {
+            *response = malloc(respMsg->dataLen);
+            recvBufLen = respMsg->dataLen;
+            memcpy(*response, respMsg->data, recvBufLen);
+        }
+    }
+    C_FREE_FUNC_NULL(resp, free);
 
     return recvBufLen;
 }
