@@ -1,6 +1,9 @@
+java
+javac
 *.sqlite
 .idea/
 cmake-*
+java/lib/
 
 # C++ objects and libs
 *.slo

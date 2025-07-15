@@ -36,6 +36,8 @@ target_include_directories(andsec-scanner PUBLIC
         ${CMAKE_SOURCE_DIR}/app/sqlite3-wrap/src
 )
 target_link_libraries(andsec-scanner PUBLIC
+        -pthread -ldl
+        -L/opt/dev/qt-5.15.15/lib
         ${HS_LIBRARIES}
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
@@ -43,6 +45,7 @@ target_link_libraries(andsec-scanner PUBLIC
         ${SQLITE3_LIBRARIES}
         -L${JAVA_HOME}/lib/server -ljvm
         -Wl,-rpath=${JAVA_HOME}/lib/server
+        -Wl,-rpath=/usr/local/andsec/lib/java
 )
 target_compile_options(andsec-scanner PUBLIC -fPIC)
 target_compile_definitions(andsec-scanner PUBLIC -D JAVA_HOME=\\"${JAVA_HOME}\\")

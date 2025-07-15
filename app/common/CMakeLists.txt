@@ -4,3 +4,4 @@ add_library(common STATIC
         proc-list.h proc-list.c
         utils-ipc.h utils-ipc.c
 )
+target_compile_options(common PUBLIC -fPIC)

@@ -5,6 +5,7 @@
 #ifndef andsec_scanner_DATA_BASE_H
 #define andsec_scanner_DATA_BASE_H
 #include <QSet>
+#include <memory>
 #include <QObject>
 #include <QDateTime>
 

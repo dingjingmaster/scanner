@@ -13,9 +13,10 @@ set(PROJECT_VERSION_PATCH 0)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(JAVA_HOME "/opt/openjdk-bin-21")
+#set(JAVA_HOME "/opt/openjdk-bin-21")
+set(JAVA_HOME "${CMAKE_SOURCE_DIR}/data/java")
 
-set(ENV{PKG_CONFIG_PATH} "/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig:${ENV_CONFIG_PATH}")
+set(ENV{PKG_CONFIG_PATH} "/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig:/opt/dev/qt-5.15.15/lib/pkgconfig/:${ENV_CONFIG_PATH}")
 
 add_definitions(
         -w -g
@@ -27,7 +28,6 @@ add_definitions(
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
         -D INSTALL_PATH=\\"/usr/local/andsec\\"
-#        -D DATA_DIR=\\"/tmp\\"
         -D DATA_DIR=\\"/var/lib/andsec/scanner/\\"
         -D C_LOG_DIR=\\"/usr/local/andsec/log/\\"
         -D PACKAGE_VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\")

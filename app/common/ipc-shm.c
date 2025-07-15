@@ -30,7 +30,7 @@ typedef struct
 } ShmPrivate;
 
 static void clean_shm_ipc           (void);
-static void clean_shm_ipc_sig       (int);
+static void clean_shm_ipc_sig       (int sig);
 static char* get_process_name       (pid_t pid);
 static void shm_destroy             (ShmPrivate* shmPrivate);
 static bool shm_set_data            (ShmPrivate* shmPrivate, const void* data, int64_t dataLen);
@@ -400,7 +400,9 @@ static void clean_shm_ipc (void)
     }
 }
 
-static void clean_shm_ipc_sig (int)
+static void clean_shm_ipc_sig (int sig)
 {
     clean_shm_ipc();
+
+    (void) sig;
 }
