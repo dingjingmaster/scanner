@@ -35,7 +35,7 @@ target_include_directories(andsec-scanner PUBLIC
 )
 target_link_libraries(andsec-scanner PUBLIC
         -pthread -ldl common
-        -L/opt/dev/qt-5.15.15/lib
+        -L/opt/dev/qt-5.15.15/lib -lQt5Core
         ${HS_LIBRARIES}
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}

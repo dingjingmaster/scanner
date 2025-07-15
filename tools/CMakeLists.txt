@@ -16,7 +16,7 @@ target_include_directories(show-task PUBLIC
         ${CMAKE_SOURCE_DIR}/hs-wrap/src
         ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
-target_link_libraries(show-task PUBLIC
+target_link_libraries(show-task PUBLIC -ldl
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
@@ -42,7 +42,7 @@ target_include_directories(show-result PUBLIC
         ${CMAKE_SOURCE_DIR}/hs-wrap/src
         ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
-target_link_libraries(show-result PUBLIC
+target_link_libraries(show-result PUBLIC -ldl
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
@@ -57,7 +57,7 @@ target_include_directories(parse-policy PUBLIC
         ${GIO_INCLUDE_DIRS}
         ${OPENCC_INCLUDE_DIRS}
 )
-target_link_libraries(parse-policy PUBLIC
+target_link_libraries(parse-policy PUBLIC -ldl
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
@@ -81,7 +81,8 @@ target_include_directories(rule-id PUBLIC
         ${CMAKE_SOURCE_DIR}/hs-wrap/src
         ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
-target_link_libraries(rule-id PUBLIC
+target_link_libraries(rule-id PUBLIC -ldl
+        -lQt5Core
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
