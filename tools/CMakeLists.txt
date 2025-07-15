@@ -3,7 +3,7 @@ add_executable(show-task
         ../app/pf/utils.cc
         ../app/pf/data-base.cc
         ../app/pf/proc-inject.cc
-        ../app/common/proc-list.c
+        ../common/proc-list.c
         ../app/sqlite3-wrap/src/sqlite3-wrap.cc
 )
 target_compile_options(show-task PUBLIC -fPIC)
@@ -28,7 +28,7 @@ add_executable(show-result
         ../app/pf/utils.cc
         ../app/pf/data-base.cc
         ../app/pf/proc-inject.cc
-        ../app/common/proc-list.c
+        ../common/proc-list.c
         ../app/sqlite3-wrap/src/sqlite3-wrap.cc
 )
 target_compile_options(show-result PUBLIC -fPIC)
@@ -66,7 +66,7 @@ add_executable(rule-id rule-id.cc
         ../app/pf/utils.cc
         ../app/pf/data-base.cc
         ../app/pf/proc-inject.cc
-        ../app/common/proc-list.c
+        ../common/proc-list.c
         ../app/sqlite3-wrap/src/sqlite3-wrap.cc
 )
 target_compile_options(rule-id PUBLIC -fPIC)

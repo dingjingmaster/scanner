@@ -1,3 +1,4 @@
+project(common LANGUAGES C)
 add_library(common STATIC
         utils.h utils.c
         ipc-shm.h ipc-shm.c
