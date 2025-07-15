@@ -46,5 +46,6 @@ target_link_libraries(andsec-scanner PUBLIC
         -Wl,-rpath=/usr/local/andsec/lib/java
 )
 target_compile_options(andsec-scanner PUBLIC -fPIC)
+target_link_options(andsec-scanner PUBLIC -Wl,-rpath,/usr/local/andsec/lib:/opt/dev/qt-5.15.15/lib)
 target_compile_definitions(andsec-scanner PUBLIC -D JAVA_HOME=\\"${JAVA_HOME}\\")
 set_target_properties(andsec-scanner PROPERTIES AUTOUIC ON AUTOMOC ON AUTORCC ON)
