@@ -13,10 +13,12 @@ target_include_directories(show-task PUBLIC
         ${OPENCC_INCLUDE_DIRS}
         ${SQLITE3_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/app/pf
+        ${CMAKE_SOURCE_DIR}/opencc/src
         ${CMAKE_SOURCE_DIR}/hs-wrap/src
         ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
 target_link_libraries(show-task PUBLIC -ldl
+        libopencc
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
@@ -39,10 +41,12 @@ target_include_directories(show-result PUBLIC
         ${OPENCC_INCLUDE_DIRS}
         ${SQLITE3_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/app/pf
+        ${CMAKE_SOURCE_DIR}/opencc/src
         ${CMAKE_SOURCE_DIR}/hs-wrap/src
         ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
 target_link_libraries(show-result PUBLIC -ldl
+        libopencc
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
@@ -56,8 +60,10 @@ target_include_directories(parse-policy PUBLIC
         ${QT5_INCLUDE_DIRS}
         ${GIO_INCLUDE_DIRS}
         ${OPENCC_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/opencc/src
 )
 target_link_libraries(parse-policy PUBLIC -ldl
+        libopencc
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
@@ -78,11 +84,12 @@ target_include_directories(rule-id PUBLIC
         ${OPENCC_INCLUDE_DIRS}
         ${SQLITE3_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/app/pf
+        ${CMAKE_SOURCE_DIR}/opencc/src
         ${CMAKE_SOURCE_DIR}/hs-wrap/src
         ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
 target_link_libraries(rule-id PUBLIC -ldl
-        -lQt5Core
+        -lQt5Core libopencc
         ${QT5_LIBRARIES}
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}

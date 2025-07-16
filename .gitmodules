@@ -13,3 +13,6 @@
 [submodule "tika-wrap"]
 	path = tika-wrap
 	url = git@github.com:dingjingmaster/tika-wrap.git
+[submodule "opencc"]
+	path = opencc
+	url = git@github.com:dingjingmaster/opencc.git

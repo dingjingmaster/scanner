@@ -14,7 +14,7 @@ C_BEGIN_EXTERN_C
 #endif
 
 #ifndef HOOK_CORE
-#define HOOK_CORE                           "/usr/local/andsec/lib/hook-main.so"
+#define HOOK_CORE                           "/usr/local/andsec/lib/dlp-hook-main.so"
 #endif
 
 #ifndef HOOK_PRELOAD

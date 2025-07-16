@@ -30,11 +30,12 @@ target_include_directories(andsec-scanner PUBLIC
         ${CMAKE_SOURCE_DIR}/app
         ${JAVA_HOME}/include
         ${JAVA_HOME}/include/linux
+        ${CMAKE_SOURCE_DIR}/opencc/src
         ${CMAKE_SOURCE_DIR}/hs-wrap/src
         ${CMAKE_SOURCE_DIR}/sqlite3-wrap/src
 )
 target_link_libraries(andsec-scanner PUBLIC
-        -pthread -ldl common
+        -pthread -ldl common libopencc
         -L/opt/dev/qt-5.15.15/lib -lQt5Core
         ${HS_LIBRARIES}
         ${QT5_LIBRARIES}
@@ -46,6 +47,6 @@ target_link_libraries(andsec-scanner PUBLIC
         -Wl,-rpath=/usr/local/andsec/lib/java
 )
 target_compile_options(andsec-scanner PUBLIC -fPIC)
-target_link_options(andsec-scanner PUBLIC -Wl,-rpath,/usr/local/andsec/lib:/opt/dev/qt-5.15.15/lib)
+target_link_options(andsec-scanner PUBLIC -Wl,-rpath,/usr/local/andsec/lib:/usr/local/andsec/lib/java/lib:/usr/local/andsec/lib/java/lib/server:/opt/dev/qt-5.15.15/lib)
 target_compile_definitions(andsec-scanner PUBLIC -D JAVA_HOME=\\"${JAVA_HOME}\\")
 set_target_properties(andsec-scanner PROPERTIES AUTOUIC ON AUTOMOC ON AUTORCC ON)
