@@ -1,9 +1,10 @@
 add_executable(show-task
         show-task.cc
+        ../common/utils.c
         ../app/pf/utils.cc
-        ../app/pf/data-base.cc
-        ../app/pf/proc-inject.cc
         ../common/proc-list.c
+        ../app/pf/data-base.cc
+        ../app/pf/proc-inject.c
         ../sqlite3-wrap/src/sqlite3-wrap.cc
 )
 target_compile_options(show-task PUBLIC -fPIC)
@@ -28,10 +29,11 @@ set_target_properties(show-task PROPERTIES AUTOUIC ON AUTOMOC ON AUTORCC ON)
 
 add_executable(show-result
         show-result.cc
+        ../common/utils.c
         ../app/pf/utils.cc
-        ../app/pf/data-base.cc
-        ../app/pf/proc-inject.cc
         ../common/proc-list.c
+        ../app/pf/data-base.cc
+        ../app/pf/proc-inject.c
         ../sqlite3-wrap/src/sqlite3-wrap.cc
 )
 target_compile_options(show-result PUBLIC -fPIC)
@@ -71,10 +73,11 @@ target_link_libraries(parse-policy PUBLIC -ldl
 set_target_properties(parse-policy PROPERTIES AUTOUIC ON AUTOMOC ON AUTORCC ON)
 
 add_executable(rule-id rule-id.cc
+        ../common/utils.c
         ../app/pf/utils.cc
-        ../app/pf/data-base.cc
-        ../app/pf/proc-inject.cc
         ../common/proc-list.c
+        ../app/pf/data-base.cc
+        ../app/pf/proc-inject.c
         ../sqlite3-wrap/src/sqlite3-wrap.cc
 )
 target_compile_options(rule-id PUBLIC -fPIC)

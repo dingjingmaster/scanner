@@ -10,7 +10,7 @@ target_include_directories(dlp-hook-main PUBLIC ${CMAKE_SOURCE_DIR}/app)
 
 add_library(hook-gdk-screenshot SHARED
         hook-common.h hook-common.c
-        hook-gdk-screenshot.c
+        hook-dbus.c
 )
 
 target_compile_options(hook-gdk-screenshot PUBLIC -fPIC)

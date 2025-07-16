@@ -6,13 +6,13 @@
 #define _GNU_SOURCE
 #include "proc-inject.h"
 
-#include <errno.h>
-#include <stdio.h>
 #include <dlfcn.h>
+#include <errno.h>
 #include <stdarg.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/uio.h>
 #include <sys/user.h>
 #include <sys/wait.h>
@@ -20,9 +20,8 @@
 #include <sys/ptrace.h>
 #include <sys/syslog.h>
 
-#include "utils.h"
 #include "common/ipc.h"
-
+#include "common/utils.h"
 
 struct _ProcInject
 {
@@ -36,7 +35,7 @@ bool proc_inject_inject_so_by_pid(int32_t pid, const char * libraryPath)
 {
     C_RETURN_VAL_IF_FAIL_SYSLOG_WARN(pid > 0 && libraryPath, false, "Invalid pid or library path.");
     C_RETURN_VAL_IF_FAIL_SYSLOG_WARN('/' == libraryPath[0], false, "Invalid path, Absolute library paths must be used.");
-    C_RETURN_VAL_IF_FAIL(!Utils::checkProcLibraryExists(pid, libraryPath), true);
+    C_RETURN_VAL_IF_FAIL(!utils_check_proc_library_exists(pid, libraryPath), true);
 
     bool ret = false;
     uintptr_t remoteAddr = 0;
@@ -79,7 +78,7 @@ bool proc_inject_inject_so_by_pid(int32_t pid, const char * libraryPath)
 
 bool proc_inject_inject_so_by_proc_name(const char* procName, const char* libraryPath)
 {
-    const int pid = Utils::getPidByProcName(procName);
+    const int pid = utils_get_pid_by_name(procName);
     C_RETURN_VAL_IF_FAIL(pid > 0, false);
 
     return proc_inject_inject_so_by_pid(pid, libraryPath);
@@ -87,7 +86,7 @@ bool proc_inject_inject_so_by_proc_name(const char* procName, const char* librar
 
 void proc_inject_inject_all_gui_proc()
 {
-    proc_list_all(inject_all_gui_default_so, nullptr);
+    proc_list_all(inject_all_gui_default_so, NULL);
 }
 
 ProcInject* proc_inject_create_by_pid(uint32_t pid)

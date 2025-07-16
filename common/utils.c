@@ -215,14 +215,16 @@ uint64_t utils_send_data_to_local_socket_with_response(const char * localSocket,
 uint64_t utils_send_data_to_local_socket_with_response_data(const char* localSocket, int ipcType, const char* data, size_t dataSize, char** response)
 {
     C_RETURN_VAL_IF_FAIL(localSocket && data, 0);
-    const uint64_t allDataLen = sizeof(struct IpcMessage) + dataSize + 1;
+    const uint64_t allDataLen = sizeof(struct IpcMessage) + dataSize;
     char* allData = malloc(allDataLen);
     C_RETURN_VAL_IF_FAIL(allData, false);
     memset(allData, 0, allDataLen);
-    struct IpcMessage* ipcMsg = (void*) allData;
-    ipcMsg->type = ipcType;
-    ipcMsg->dataLen = dataSize;
-    memcpy(ipcMsg->data, data, dataSize);
+    struct IpcMessage ipcMsg;
+    ipcMsg.type = ipcType;
+    ipcMsg.dataLen = dataSize;
+
+    memcpy(allData, &ipcMsg, sizeof(ipcMsg));
+    memcpy(allData + sizeof(ipcMsg), data, dataSize);
 
     char* resp = NULL;
     uint64_t recvBufLen = 0;
@@ -232,7 +234,7 @@ uint64_t utils_send_data_to_local_socket_with_response_data(const char* localSoc
         const struct IpcMessage* respMsg = (struct IpcMessage*) resp;
         C_FREE_FUNC_NULL(*response, free);
         if (respMsg->dataLen > 0) {
-            *response = malloc(respMsg->dataLen);
+            *response = malloc(respMsg->dataLen + 1);
             recvBufLen = respMsg->dataLen;
             memcpy(*response, respMsg->data, recvBufLen);
         }

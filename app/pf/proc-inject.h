@@ -10,6 +10,7 @@
 #include "macros/macros.h"
 #include "../common/proc-list.h"
 
+C_BEGIN_EXTERN_C
 
 typedef struct _ProcInject      ProcInject;
 // typedef bool (*ProcIterator)    (int pid, const char* procPath, int uid, void* uData);
@@ -91,5 +92,6 @@ bool            proc_inject_write_memory            (ProcInject* injector, uintp
  */
 bool            proc_inject_get_local_module_name   (ProcInject* injector, void* address, char* moduleName, int moduleNameBufLen);
 
+C_END_EXTERN_C
 
 #endif // client_PROC_INJECT_H

@@ -13,11 +13,10 @@
 
 #include <QDebug>
 
+#include "macros/macros.h"
 #include "proc-inject.h"
 #include "task-manager.h"
 #include "utils.h"
-#include "macros/macros.h"
-
 
 #define IPC_SCAN_TASK_SOCKET_PATH "/usr/local/andsec/start/andsec-scan-task.sock"
 

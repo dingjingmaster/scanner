@@ -10,10 +10,9 @@
 #include <opencc.h>
 #include <QCryptographicHash>
 
-#include "proc-inject.h"
-#include "../macros/macros.h"
 #include "../common/proc-list.h"
-
+#include "../macros/macros.h"
+#include "proc-inject.h"
 
 struct ProcName
 {
