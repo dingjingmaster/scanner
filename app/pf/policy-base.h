@@ -263,9 +263,13 @@ public:
     void setDescription(const QString& desc);
     const QString& getDescription() const;
 
+    void setFinallyHitCount(qint64 c);
+    qint64 getFinallyHitCount() const;
+
     void setRiskLevel(RiskLevel level);
     void setRiskLevel(int level);
     RiskLevel getRiskLevel() const;
+    int getRiskLevelInt() const;
     QString getRiskLevelString() const;
 
     void setRuleHitCount(qint64 count);
@@ -276,6 +280,8 @@ public:
 
     void setOrder(int order);
     int getOrder() const;
+
+    bool containsRule(const QString& key) const;
 
     MatchResult match (const QString& filePath, const QString& metaPath, const QString& ctxPath);
 
@@ -289,6 +295,8 @@ private:
     qint64                                      mRuleExceptCount;       // 组内例外命中策略数，-1表示需要全部命中
     QMap<QString, std::shared_ptr<RuleBase>>    mExceptRules;
     QMap<QString, std::shared_ptr<RuleBase>>    mRules;                 // 规则
+
+    qint64                                      mRuleHitResultCount;    // 最终命中次数(策略组没命中则为0)
 };
 
 

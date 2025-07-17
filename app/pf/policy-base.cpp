@@ -1110,10 +1110,11 @@ void PolicyGroup::setDescription(const QString & desc)
     mDescription = desc;
 }
 
-const QString & PolicyGroup::getDescription() const
-{
-    return mDescription;
-}
+const QString &PolicyGroup::getDescription() const { return mDescription; }
+
+void PolicyGroup::setFinallyHitCount(qint64 c) { mRuleHitResultCount = c; }
+
+qint64 PolicyGroup::getFinallyHitCount() const { return mRuleHitResultCount; }
 
 void PolicyGroup::setRiskLevel(RiskLevel level)
 {
@@ -1142,6 +1143,24 @@ void PolicyGroup::setRiskLevel(int level)
 RiskLevel PolicyGroup::getRiskLevel() const
 {
     return mRiskLevel;
+}
+
+int PolicyGroup::getRiskLevelInt() const
+{
+    switch (mRiskLevel) {
+        default:
+        case RiskLevel::Low: {
+            return 0;
+        }
+        case RiskLevel::Middle: {
+            return 1;
+        }
+        case RiskLevel::High: {
+            return 2;
+        }
+    }
+
+    return 0;
 }
 
 QString PolicyGroup::getRiskLevelString() const
@@ -1190,6 +1209,17 @@ void PolicyGroup::setOrder(int order)
 int PolicyGroup::getOrder() const
 {
     return mOrder;
+}
+
+bool PolicyGroup::containsRule(const QString& key) const
+{
+    for (const auto& rule : mRules) {
+        if (rule->getRuleId() == key) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath, const QString& ctxPath)
@@ -1255,6 +1285,7 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
             // 如果配置非全量匹配
             if (minMatchCount >= 0 && matchInt >= minMatchCount) {
                 TASK_SCAN_LOG_INFO << "命中策略, file: " << filePath;
+                setFinallyHitCount(static_cast<qint64>(matchInt));
                 return MatchResult::PG_MATCH_OK;
             }
         }
@@ -1262,6 +1293,7 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
         // 如果配置全量匹配
         if (minMatchCount < 0 && matchInt >= minMatchCount) {
             TASK_SCAN_LOG_INFO << "命中策略, file: " << filePath << " matchInt: " << matchInt << " rule count: " << ruleCount;
+            setFinallyHitCount(static_cast<qint64>(matchInt));
             return MatchResult::PG_MATCH_OK;
         }
     }

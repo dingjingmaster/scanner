@@ -4,8 +4,15 @@
 
 #include "gen-event.h"
 
-#include <QDebug>
+#include "data-base.h"
 
+#include <QDebug>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+
+#include <pwd.h>
+#include <unistd.h>
 #include <sys/un.h>
 #include <gio/gio.h>
 #include <sys/file.h>
@@ -29,22 +36,93 @@ GenEvent& GenEvent::getInstance()
     return gInstance;
 }
 
-void GenEvent::genScanProgress(const QString& taskId, ScanStatus scanStatus, qint64 scannedNum, qint64 totalNum, qint32 times, bool isScheduled, qint32 execTimes) const
+void GenEvent::genScanProgress(const QString &taskId, ScanStatus scanStatus,
+                               qint64 scannedNum, qint64 totalNum, qint32 times,
+                               bool isScheduled, qint32 execTimes) const
 {
-#define SCAN_PROGRESS_TYPE      230
+#define SCAN_PROGRESS_TYPE 230
     const QString ctx = QString("%1|%2|%3|%4|%5|%6|%7")
-                .arg(taskId)
-                .arg(getScanStatusString(scanStatus))
-                .arg(scannedNum)
-                .arg(totalNum)
-                .arg(times)
-                .arg(isScheduled ? 1 : 0)
-                .arg(execTimes);
+                          .arg(taskId)
+                          .arg(getScanStatusString(scanStatus))
+                          .arg(scannedNum)
+                          .arg(totalNum)
+                          .arg(times)
+                          .arg(isScheduled ? 1 : 0)
+                          .arg(execTimes);
 
     qInfo() << "\n上报:\n" << ctx;
-    auto resp = sendServerTypeAndWaitResp(SCAN_PROGRESS_TYPE, ctx.toUtf8(), false);
+    const auto resp = sendServerTypeAndWaitResp(SCAN_PROGRESS_TYPE, ctx.toUtf8(), false);
+    qInfo() << "[Scan Process] post result: " << resp;
 
 #undef SCAN_PROGRESS_TYPE
+}
+void GenEvent::genScanContentEvent(const QString &taskId, const std::shared_ptr<PolicyGroup>& pg, const QString &fileName, bool isScheduled) const
+{
+#define SCAN_PROCESS_CONTENT_TYPE 231
+    QLocale locale;
+    const QFileInfo fi(fileName);
+    struct passwd* pwd = nullptr;
+    QJsonObject obj;
+    obj["logType"] = 2;
+    obj["scanId"] = taskId;
+    obj["time"] = QDateTime::currentDateTime().toLocalTime().toString("yyyy-mm-dd hh:MM:ss");
+    obj["times"] = pg->getFinallyHitCount();
+    obj["isScheduled"] = (isScheduled ? 1 : 0);
+    obj["execTimes"] = DataBase::getInstance().getExecTimes(taskId);
+    obj["fileName"] = fileName;
+    obj["attachmentZip"] = "";
+    obj["hash"] = DataBase::getInstance().getScanResultItemMd5(fileName);
+    obj["fileType"] = DataBase::getInstance().getScanResultItemType(fileName);
+    obj["recognized"] = "0";
+    obj["fileSize"] = QString("%1").arg(fi.size());
+    obj["gradeIds"] = QJsonArray();
+    QJsonArray policyInfoArr;
+
+    const auto content = DataBase::getInstance().getScanResultContent(fileName);
+    for (auto& p : content) {
+        if (pg->containsRule(p.ruleId)) {
+            QJsonObject pi;
+            pi["policyId"] = p.ruleId;
+            pi["trip"] = 1;
+            pi["level"] = pg->getRiskLevelInt();
+            pi["count"] = 1;    // fixme://
+            pi["action"] = 4;
+            QJsonArray ctxArr;
+            QJsonObject ctx;
+            ctx["info"] = QString("%1@%2%3")
+                        .arg(p.key.size(), 4, 10, QChar('0'))
+                        .arg(p.content.size(), 4, 10, QChar('0'))
+                        .arg(p.content);
+            ctxArr.append(ctx);
+            pi["context"] = ctxArr;
+            QJsonArray extActionInfoArr;
+            extActionInfoArr.append(QJsonObject());
+            extActionInfoArr.append(QJsonObject());
+            extActionInfoArr.append(QJsonObject());
+            pi["extActionInfo"] = extActionInfoArr;
+            policyInfoArr.append(pi);
+        }
+    }
+
+    obj["policyInfo"] = policyInfoArr;
+    QJsonArray fileInfoArr;
+    QJsonObject fileInfo;
+    fileInfo["名称"] = fi.baseName();
+    fileInfo["大小"] = locale.formattedDataSize(fi.size());
+    fileInfo["项目类型"] = "文件";
+    fileInfo["创建日期"] = fi.birthTime().toString("yyyy-mm-dd hh:MM:ss");
+    fileInfo["访问日期"] = fi.lastRead().toString("yyyy-mm-dd hh:mm:ss");
+    fileInfo["修改日期"] = fi.lastModified().toString("yyyy-mm-dd hh:mm");
+    pwd = getpwuid(fi.ownerId());
+    fileInfo["所有者"] = pwd ? pwd->pw_name : "默认";
+    fileInfo["计算机"] = QSysInfo::machineHostName();
+    fileInfoArr.append(fileInfo);
+    obj["fileInfo"] = fileInfoArr;
+
+    qInfo() << "\n上报:\n" << obj;
+    const auto resp = sendServerTypeAndWaitResp(SCAN_PROCESS_CONTENT_TYPE, QJsonDocument(obj).toJson(QJsonDocument::Compact), false);
+    qInfo() << "[Scan Process] post result: " << resp;
+#undef SCAN_PROCESS_CONTENT_TYPE
 }
 
 QByteArray GenEvent::sendServerTypeAndWaitResp(int serverIpcType, const QByteArray& data, bool waitResp) const

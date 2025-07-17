@@ -278,6 +278,8 @@ static void process_client_inject_lib_by_proc_name  (Ipc* ipc, const QByteArray&
 
 static void process_client_inject_all_all_gui_proc  (Ipc* ipc, const QByteArray& data, GSocket& clientSock)
 {
+    qInfo() << "Inject all gui proc";
+
     proc_inject_inject_all_gui_proc();
 
     Q_UNUSED(ipc);

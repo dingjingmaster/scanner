@@ -544,6 +544,8 @@ void ScanTask::scanFile(const QString& filePath)
         const MatchResult matchResult = p->match(filePath, meta, ctx);
         if (matchResult == MatchResult::PG_MATCH_OK) {
             TASK_SCAN_LOG_INFO << "file: " << filePath << " Matched(规则匹配)!";
+            // 上报事件
+            GenEvent::getInstance().genScanContentEvent(getTaskId(), p, filePath, getIsScheduled());
         }
         else if (matchResult == MatchResult::PG_MATCH_ERR) {
             TASK_SCAN_LOG_INFO << "file: " << filePath << " err(出错)!";

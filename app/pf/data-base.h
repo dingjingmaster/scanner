@@ -26,6 +26,12 @@ public:
         TASK_STATUS_FINISHED = 3,
         TASK_STATUS_PAUSE = 4,
     };
+    struct ResultContent
+    {
+        QString ruleId;
+        QString key;
+        QString content;
+    };
     static DataBase& getInstance();
     DataBase(DataBase &&) = delete;
     DataBase(DataBase const &) = delete;
@@ -84,7 +90,10 @@ public:
 
     // scan result
     void showScanResult() const;
+    QString getScanResultItemMd5(const QString& filePath) const;
+    QString getScanResultItemType(const QString& filePath) const;
     bool checkScanResultItemExists(const QString& filePath) const;
+    QList<ResultContent> getScanResultContent(const QString& filePath) const;
     QPair<QString, QString> getScanResultPolicyIdAndMd5(const QString& filePath) const;
     void updateScanResultItems(const QString& filePath, const QString& ruleId, const QString& fileType, const QString& content) const;
 

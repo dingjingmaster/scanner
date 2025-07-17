@@ -350,7 +350,12 @@ static bool inject_all_gui_default_so (int pid, const char* procPath, int uid, b
         if (!proc_inject_inject_so_by_pid(pid, HOOK_PRELOAD)) {
             g_warning("[Hook] pid: %d, proc: %s, uid: %d, isGui: %s, error!", pid, procPath, uid, (isGui ? "true" : "false"));
         }
+        else {
+            g_info("[Hook] pid: %d, proc: %s, uid: %d, isGui: %s, OK!", pid, procPath, uid, (isGui ? "true" : "false"));
+        }
     }
 
     return true;
+
+    (void) uData;
 }

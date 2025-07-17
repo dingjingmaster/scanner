@@ -7,7 +7,6 @@
 #include "pf/qlog.h"
 #include "pf/glog.h"
 
-#define C_LOG_TAG "AndsecScanner"
 
 int main (int argc, char* argv[])
 {
