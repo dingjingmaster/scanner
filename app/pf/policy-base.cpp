@@ -1150,13 +1150,13 @@ int PolicyGroup::getRiskLevelInt() const
     switch (mRiskLevel) {
         default:
         case RiskLevel::Low: {
-            return 0;
-        }
-        case RiskLevel::Middle: {
             return 1;
         }
-        case RiskLevel::High: {
+        case RiskLevel::Middle: {
             return 2;
+        }
+        case RiskLevel::High: {
+            return 3;
         }
     }
 
@@ -1209,6 +1209,11 @@ void PolicyGroup::setOrder(int order)
 int PolicyGroup::getOrder() const
 {
     return mOrder;
+}
+
+QString PolicyGroup::getId() const
+{
+    return mId;
 }
 
 bool PolicyGroup::containsRule(const QString& key) const

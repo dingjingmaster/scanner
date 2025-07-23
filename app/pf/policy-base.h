@@ -281,6 +281,7 @@ public:
     void setOrder(int order);
     int getOrder() const;
 
+    QString getId() const;
     bool containsRule(const QString& key) const;
 
     MatchResult match (const QString& filePath, const QString& metaPath, const QString& ctxPath);

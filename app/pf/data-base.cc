@@ -21,7 +21,8 @@
     "SELECT task_id, task_name, scan_task_dir, scan_task_dir_exception, " \
     "scan_task_file_ext, scan_task_file_ext_exception, " \
     "start_time, stop_time, total_file, finished_file, " \
-    "task_status, scan_mode, round, times, is_scheduled FROM scan_task;"
+    "task_status, scan_mode, round, times, is_scheduled, " \
+    "policy_ids FROM scan_task;"
 
 #define SCAN_TASK_TABLE \
     "CREATE TABLE scan_task (" \
@@ -675,12 +676,24 @@ void DataBase::showScanTask() const
         for (; iter != query.end(); ++iter) {
             const qint64 startTime = (*iter).get<qint64>(6);
             const qint64 stopTime = (*iter).get<qint64>(7);
-            qInfo() << "===========\n" << "Task ID         : " << (*iter).get<QString>(0) << "\n" << "Task Name       : " << (*iter).get<QString>(1) << "\n" << "Scan Dir        : " << (*iter).get<QString>(2).split("{]") << "\n" <<
-                "Scan Dir(N)     : " << (*iter).get<QString>(3).split("{]") << "\n" << "Scan File ext   : " << (*iter).get<QString>(4).split("{]") << "\n" << "Scan File ext(N): " << (*iter).get<QString>(5).split("{]") << "\n" <<
-                "Start Time      : " << (startTime > 0 ? QDateTime::fromMSecsSinceEpoch(startTime).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") : "null") << "\n" << "Stop Time       : " << (
-                    stopTime > 0 ? QDateTime::fromMSecsSinceEpoch(stopTime).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") : "null") << "\n" << "Total File      : " << (*iter).get<qint64>(8) << "\n" << "Finished File   : " << (*iter).get<
-                    qint64>(9) << "\n" << "Task Status     : " << getTaskStatusString((*iter).get<int>(10)) << "\n" << "Task Mode       : " << getTaskModeString((*iter).get<int>(11)) << "\n" << "Round           : " << (*iter).get<int>(12)
-                << "\n" << "Times           : " << (*iter).get<int>(13) << "\n" << "Is scheduled    : " << (*iter).get<int>(14) << "\n\n\n";
+            qInfo() << "===========\n"
+                    << "Task ID         : " << (*iter).get<QString>(0) << "\n"
+                    << "Task Name       : " << (*iter).get<QString>(1) << "\n"
+                    << "Scan Dir        : " << (*iter).get<QString>(2).split("{]") << "\n"
+                    << "Scan Dir(N)     : " << (*iter).get<QString>(3).split("{]") << "\n"
+                    << "Scan File ext   : " << (*iter).get<QString>(4).split("{]") << "\n"
+                    << "Scan File ext(N): " << (*iter).get<QString>(5).split("{]") << "\n"
+                    << "Start Time      : " << (startTime > 0 ? QDateTime::fromMSecsSinceEpoch(startTime).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") : "null") << "\n"
+                    << "Stop Time       : " << (stopTime > 0 ? QDateTime::fromMSecsSinceEpoch(stopTime).toLocalTime().toString("yyyy-mm-dd HH:MM:ss") : "null") << "\n"
+                    << "Total File      : " << (*iter).get<qint64>(8) << "\n"
+                    << "Finished File   : " << (*iter).get<qint64>(9) << "\n"
+                    << "Task Status     : " << getTaskStatusString((*iter).get<int>(10)) << "\n"
+                    << "Task Mode       : " << getTaskModeString((*iter).get<int>(11)) << "\n"
+                    << "Round           : " << (*iter).get<int>(12) << "\n"
+                    << "Times           : " << (*iter).get<int>(13) << "\n"
+                    << "Is scheduled    : " << (*iter).get<int>(14) << "\n"
+                    << "Policy Ids      : " << (*iter).get<QString>(15).split("{]") << "\n"
+                    << "\n\n";
         }
         query.finish();
     }

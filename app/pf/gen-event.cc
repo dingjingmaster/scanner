@@ -61,14 +61,14 @@ void GenEvent::genScanContentEvent(const QString &taskId, const std::shared_ptr<
 #define SCAN_PROCESS_CONTENT_TYPE 231
     QLocale locale;
     const QFileInfo fi(fileName);
-    struct passwd* pwd = nullptr;
+    const struct passwd* pwd = nullptr;
     QJsonObject obj;
     obj["logType"] = 2;
     obj["scanId"] = taskId;
     obj["time"] = QDateTime::currentDateTime().toLocalTime().toString("yyyy-mm-dd hh:MM:ss");
-    obj["times"] = pg->getFinallyHitCount();
+    obj["times"] = QString("%1").arg(pg->getFinallyHitCount());
     obj["isScheduled"] = (isScheduled ? 1 : 0);
-    obj["execTimes"] = DataBase::getInstance().getExecTimes(taskId);
+    obj["execTimes"] = DataBase::getInstance().getExecTimes(taskId) + 1;
     obj["fileName"] = fileName;
     obj["attachmentZip"] = "";
     obj["hash"] = DataBase::getInstance().getScanResultItemMd5(fileName);
@@ -82,17 +82,19 @@ void GenEvent::genScanContentEvent(const QString &taskId, const std::shared_ptr<
     for (auto& p : content) {
         if (pg->containsRule(p.ruleId)) {
             QJsonObject pi;
-            pi["policyId"] = p.ruleId;
+            pi["policyId"] = pg->getId();
             pi["trip"] = 1;
             pi["level"] = pg->getRiskLevelInt();
             pi["count"] = 1;    // fixme://
             pi["action"] = 4;
             QJsonArray ctxArr;
             QJsonObject ctx;
-            ctx["info"] = QString("%1@%2%3")
+            const QString ctxInfo = QString("%1%2@%3%4")
                         .arg(p.key.size(), 4, 10, QChar('0'))
+                        .arg(p.key)
                         .arg(p.content.size(), 4, 10, QChar('0'))
                         .arg(p.content);
+            ctx["info"] = QString(ctxInfo.toUtf8().toBase64());
             ctxArr.append(ctx);
             pi["context"] = ctxArr;
             QJsonArray extActionInfoArr;
