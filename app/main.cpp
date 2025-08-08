@@ -6,6 +6,7 @@
 
 #include "pf/qlog.h"
 #include "pf/glog.h"
+#include "tika-wrap/src/java-env.h"
 
 
 int main (int argc, char* argv[])
@@ -17,7 +18,7 @@ int main (int argc, char* argv[])
 
     app.start();
 
-    return PolicyFilter::exec();
+    return app.exec();
 }
 
 

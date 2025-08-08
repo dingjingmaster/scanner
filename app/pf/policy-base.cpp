@@ -1233,8 +1233,12 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
     << "[TaskId: " << mId \
     << " TaskName: " << mName \
     << " RiskLevel: " << getRiskLevelString() \
-    << " RuleHitCount: " << mRuleHitCount \
-    << " RuleExceptCount: " << mRuleExceptCount \
+    << " minRuleHitCount: " << mRuleHitCount \
+    << " minRuleExceptCount: " << mRuleExceptCount \
+    << " realExpInt: " << expInt \
+    << " realMatchInt: " << matchInt \
+    << " expInt: " << exceptCount \
+    << " matchInt: " << ruleCount \
     << "] "
 #if 0
     QFile fileM(metaPath);
@@ -1252,7 +1256,10 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
 
     // 例外
     quint64 expInt = 0;         // 例外命中数量
+    quint64 matchInt = 0;       // 规则命中数量
     const qint64 exceptCount = mExceptRules.count();
+    const qint64 ruleCount = mRules.count();
+
     if (exceptCount > 0) {
         const qint64 minExceptCount = getRuleExceptCount();
         for (auto kv = mExceptRules.keyValueBegin(); kv != mExceptRules.keyValueEnd(); ++kv) {
@@ -1262,6 +1269,7 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
             }
 
             // 如果配置非全量匹配
+            qInfo() << "minExceptCount: " << minExceptCount << " exceptCount: " << expInt;
             if (minExceptCount >= 0 && expInt >= minExceptCount) {
                 TASK_SCAN_LOG_INFO << "命中例外策略, file: " << filePath;
                 return MatchResult::PG_MATCH_EXCEPT;
@@ -1277,8 +1285,6 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
 
 
     // 匹配
-    quint64 matchInt = 0;       // 规则命中数量
-    const qint64 ruleCount = mRules.count();
     if (ruleCount > 0) {
         const qint64 minMatchCount = getRuleHitCount();
         for (auto kv = mRules.keyValueBegin(); kv != mRules.keyValueEnd(); ++kv) {
@@ -1296,7 +1302,7 @@ MatchResult PolicyGroup::match(const QString& filePath, const QString& metaPath,
         }
 
         // 如果配置全量匹配
-        if (minMatchCount < 0 && matchInt >= minMatchCount) {
+        if (minMatchCount < 0 && matchInt >= ruleCount) {
             TASK_SCAN_LOG_INFO << "命中策略, file: " << filePath << " matchInt: " << matchInt << " rule count: " << ruleCount;
             setFinallyHitCount(static_cast<qint64>(matchInt));
             return MatchResult::PG_MATCH_OK;

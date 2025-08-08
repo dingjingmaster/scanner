@@ -231,14 +231,22 @@ void TaskManager::checkAllTask()
 {
     Q_D(TaskManager);
 
+    QSet<QString> delTaskIds;
     for (auto it = d->mScanTasks.keyValueBegin(); it != d->mScanTasks.keyValueEnd(); ++it) {
         qInfo() << "Schedule Task: " << it->first;
         if (it->second->checkNeedRun()) {
             startScanTask(it->second);
         }
         else {
+            if (!it->second->getIsScheduled()) {
+                delTaskIds << it->first;
+            }
             qInfo() << "Task: " << it->first << " Not Need Run!";
         }
+    }
+
+    for (auto& id : delTaskIds) {
+        removeScanTask(id);
     }
 }
 

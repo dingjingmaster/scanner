@@ -43,11 +43,15 @@ target_link_libraries(andsec-scanner PUBLIC
         ${GIO_LIBRARIES}
         ${OPENCC_LIBRARIES}
         ${SQLITE3_LIBRARIES}
-        -L${JAVA_HOME}/lib/server -ljvm
-        -Wl,-rpath=${JAVA_HOME}/lib/server
-        -Wl,-rpath=/usr/local/andsec/lib/java
+        #-L${JAVA_HOME}/lib/server -ljvm
+        #-Wl,-rpath=${JAVA_HOME}/lib/server
+        #-Wl,-rpath=/usr/local/andsec/scan/lib/java/lib
 )
 target_compile_options(andsec-scanner PUBLIC -fPIC)
-target_link_options(andsec-scanner PUBLIC -Wl,-rpath,/usr/local/andsec/lib:/usr/local/andsec/lib/java/lib:/usr/local/andsec/lib/java/lib/server:/opt/dev/qt-5.15.15/lib)
-target_compile_definitions(andsec-scanner PUBLIC -D JAVA_HOME=\\"${JAVA_HOME}\\" -D C_LOG_TAG=\"andsec-scanner\" -D C_LOG_SIZE=409600000)
+target_link_options(andsec-scanner PUBLIC -Wl,-rpath,/usr/local/andsec/lib:/usr/local/andsec/scan/lib/java/lib:/usr/local/andsec/scan/lib/java/lib/server:/opt/dev/qt-5.15.15/lib)
+target_compile_definitions(andsec-scanner PUBLIC
+        -D USE_TIKA_SERVER
+        -D JAVA_HOME=\\"${JAVA_HOME}\\"
+        -D C_LOG_TAG=\"andsec-scanner\"
+        -D C_LOG_SIZE=409600000)
 set_target_properties(andsec-scanner PROPERTIES AUTOUIC ON AUTOMOC ON AUTORCC ON)
