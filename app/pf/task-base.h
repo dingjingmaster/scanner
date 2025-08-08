@@ -102,7 +102,7 @@ public:
     const QSet<QString>& getBypassFileType() const;
     const QSet<QString>& getTaskBypassPath() const;
 
-    bool checkNeedRun();
+    bool checkNeedRun() const;
     void taskForceReload() const;
 
     void errorRun();                            // 出错

@@ -12,6 +12,7 @@ int main (int argc, char* argv[])
 {
     g_log_set_writer_func(c_glog_handler, nullptr, nullptr);
     qInstallMessageHandler(c_qlog_handler);
+    sigaction(SIGSEGV, nullptr, nullptr);
     PolicyFilter app(argc, argv);
 
     app.start();

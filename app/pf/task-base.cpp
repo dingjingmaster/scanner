@@ -229,7 +229,7 @@ const QSet<QString> & ScanTask::getTaskBypassPath() const
     return mTaskBypassPath;
 }
 
-bool ScanTask::checkNeedRun()
+bool ScanTask::checkNeedRun() const
 {
     // 普通任务，未初始化、扫描中、未完成，则开始扫描
     DataBase::TaskStatus taskStatus = DataBase::getInstance().getTaskStatus(getTaskId());
@@ -533,6 +533,16 @@ void ScanTask::scanFile(const QString& filePath)
 
     const QString& meta = QString("%1/meta.txt").arg(tmpDirPath);
     const QString& ctx = QString("%1/ctx.txt").arg(tmpDirPath);
+
+#if 0
+    QFile ctxF (ctx);
+    ctxF.open(QIODevice::ReadOnly | QIODevice::Text);
+    QFile metaF (meta);
+    metaF.open(QIODevice::ReadOnly | QIODevice::Text);
+    TASK_SCAN_LOG_INFO << "\nScanning file: " << filePath << "\nCtx: " << ctxF.readAll() << "\n meta: " << metaF.readAll() << "\n";
+    ctxF.close();
+    metaF.close();
+#endif
 
     for (auto i : mPoliciesOrderIdx) {
         if (!mPoliciesIdx.contains(i)) {

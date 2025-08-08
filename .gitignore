@@ -4,6 +4,7 @@ javac
 .idea/
 cmake-*
 java/lib/
+.ccls-cache/
 
 # C++ objects and libs
 *.slo
