@@ -20,6 +20,7 @@ add_definitions(
         -D QT_MESSAGELOGCONTEXT
         -D DDEBUG
 
+        -D USE_TIKA_SERVER
         -D G_LOG_TAG=\\"${PROJECT_NAME}\\"
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
