@@ -641,6 +641,7 @@ void ScanTask::finishedRun()
             getScannedFileNum(), getTotalFileNum(), getTimes(), isScheduled, isScheduled ? execTimes : 1);
 
     // 保存数据库
+    DataBase::getInstance().updateExecTimes(getTaskId());
     DataBase::getInstance().updateStopTime(getTaskId(), QDateTime::currentDateTime());
     DataBase::getInstance().updateTaskStatusFinished(getTaskId());
 }

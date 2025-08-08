@@ -57,6 +57,7 @@ public:
     void updateFinishedFileAdd(const QString& taskId, qint64 finishedFile) const;
     void updateStartTime(const QString& taskId, const QDateTime& startTime) const;
     void updateStopTime(const QString& taskId, const QDateTime& stopTime) const;
+    void updateExecTimes(const QString& taskId) const;
 
     void updateTaskStatusPause(const QString& taskId) const;
     void updateTaskStatusRunning(const QString& taskId) const;
@@ -73,6 +74,7 @@ public:
     // 获取所有TaskId
     QStringList queryTaskIds() const;
     int getExecTimes(const QString& taskId) const;
+    void setExecTimes(const QString& taskId, int execTimes) const;
     int getTimes(const QString& taskId) const;
     void setTimes(const QString& taskId, int times) const;
 

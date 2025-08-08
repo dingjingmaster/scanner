@@ -286,6 +286,11 @@ void DataBase::updateStopTime(const QString& taskId, const QDateTime& stopTime) 
     }
 }
 
+void DataBase::updateExecTimes(const QString& taskId) const
+{
+    setExecTimes(taskId, getExecTimes(taskId) + 1);
+}
+
 void DataBase::updateTaskStatusPause(const QString& taskId) const
 {
     try {
@@ -495,6 +500,21 @@ int DataBase::getExecTimes(const QString& taskId) const
     qInfo() << "ret: " << ret << ", execTimes: " << execTimes;
 
     return execTimes;
+}
+
+void DataBase::setExecTimes(const QString& taskId, int execTimes) const
+{
+    try {
+        int ret = 0;
+        const sqlite3_wrap::Sqlite3Command cmd(*mDB, "UPDATE scan_task SET round = ? WHERE task_id=?;");
+        cmd.bind(1, execTimes);
+        cmd.bind(1, taskId);
+        ret = cmd.execute();
+        qInfo() << "ret: " << ret << ", times: " << execTimes;
+    }
+    catch (std::exception& ex) {
+        qWarning() << "err: " << ex.what();
+    }
 }
 
 int DataBase::getTimes(const QString& taskId) const
